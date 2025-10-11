@@ -1,2 +1,5 @@
 resources
 *.out
+*.o
+*.obj
+cache

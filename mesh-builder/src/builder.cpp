@@ -40,11 +40,11 @@ int load_data(int16_t *&out, size_t &size, const string &nme) {
         char *buff = new char[length];
         is.read(buff, length);
         
-        int len = length >> 1;
+        size_t len = length >> 1;
         
         // data is stored in big endian in hgt files, need to swap bytes
         // before converting to 16 bit
-        for (int i = 0; i < len; ++i) {
+        for (size_t i = 0; i < len; ++i) {
             int16_t tmp = buff[i * 2];
             buff[i * 2] = buff[i * 2 + 1];
             buff[i * 2 + 1] = tmp; 
@@ -70,8 +70,8 @@ int load_data(int16_t *&out, size_t &size, const string &nme) {
 }
 
 struct IdxLatLon {
-    int row;
-    int col;
+    size_t row;
+    size_t col;
     double lat;
     double lon;
 };
@@ -128,8 +128,8 @@ public:
         double firstY;
         double firstZ;
     
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < size; ++j) {
+        for (size_t i = 0; i < size; ++i) {
+            for (size_t j = 0; j < size; ++j) {
                 IdxLatLon cur = { i, j, llat + latstep * i, llon + lonstep * j };
                 if (first) {
                     Vec3 point = toPoint(cur);
@@ -188,7 +188,7 @@ struct Array4 {
 
 // for ensuring little endianness as requierd by STL format
 inline void make_little_endian(uint32_t val, Array4 &buf) {
-    for (int i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < 4; ++i) {
         buf.arr[i] = (char) (val & 0xff);
         val >>= 8;
     }
@@ -247,12 +247,8 @@ void export_stl(Vec3 *points, size_t size) {
     out.write(header, sizeof(header));
     out.write(triangles.arr, 4);
     
-    Array4 buf;
-    
-    int cnt = 0;
-    
-    for (int i = 0; i < size - 1; ++i) {
-        for (int j = 0; j < size - 1; ++j) {
+    for (size_t i = 0; i < size - 1; ++i) {
+        for (size_t j = 0; j < size - 1; ++j) {
             Vec3 leftT = points[i * size + j];
             Vec3 rightT = points[i * size + j + 1];
             Vec3 leftB = points[(i + 1) * size + j];
@@ -271,14 +267,14 @@ void export_obj(Vec3 *points, size_t size) {
     ofstream out("../viewer/out.obj");
     
     size_t N = size * size;
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
         Vec3 point = points[i];
         out << "v\t";
         out << (float) point.x << "\t" << (float) point.y << "\t" << (float) point.z << "\n";
     }
     
-    for (int i = 0; i < size - 1; ++i) {
-        for (int j = 0; j < size - 1; ++j) {
+    for (size_t i = 0; i < size - 1; ++i) {
+        for (size_t j = 0; j < size - 1; ++j) {
             size_t leftT = 1 + i * size + j;
             size_t rightT = 1 + i * size + j + 1;
             size_t leftB = 1 + (i + 1) * size + j;
