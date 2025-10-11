@@ -12,7 +12,7 @@ CImgUC::CImgUC(string nme) {
 }
 
 CImgUC::CImgUC(unsigned int width, unsigned int height) {
-    cimg = CImg(width, height);
+    cimg = CImg(width, height, 1, 3);
 }
 
 int CImgUC::width() const {

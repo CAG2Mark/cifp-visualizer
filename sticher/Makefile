@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -O2
+CFLAGS = -Wall -O2 -std=c++20 -ffast-math
 CFLAGS += -Isrc -Iinclude -Ilib/cimg
 
 ifeq ($(OS),Windows_NT)
