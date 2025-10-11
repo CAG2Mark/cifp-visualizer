@@ -122,11 +122,26 @@ public:
         points = new Vec3[size * size];
         double latstep = (ulat - llat) / (size - 1);
         double lonstep = (ulong - llon) / (size - 1);
+        
+        bool first = true;
+        double firstX;
+        double firstY;
+        double firstZ;
     
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < size; ++j) {
                 IdxLatLon cur = { i, j, llat + latstep * i, llon + lonstep * j };
-                points[i * size + j] = toPoint(cur);
+                if (first) {
+                    Vec3 point = toPoint(cur);
+                    points[i * size + j] = {0, 0, 0};
+                    firstX = point.x;
+                    firstY = point.y;
+                    firstZ = point.z;
+                    first = false;
+                } else {
+                    Vec3 point = toPoint(cur);
+                    points[i * size + j] = { point.x - firstX, point.y - firstY, point.z - firstZ };
+                }
             }
         }
     }
@@ -150,7 +165,7 @@ public:
 };
 
 // a -> b -> c should be counter clockwise when facing them
-Vec3 normal(const Vec3 &a, const Vec3 &b, const Vec3 &c) {
+inline Vec3 normal(const Vec3 &a, const Vec3 &b, const Vec3 &c) {
     Vec3 v1 { b.x - a.x, b.y - a.y, b.z - a.z};
     Vec3 v2 { c.x - a.x, c.y - a.y, c.z - a.z};
     Vec3 cross = {
@@ -158,11 +173,11 @@ Vec3 normal(const Vec3 &a, const Vec3 &b, const Vec3 &c) {
         v1.z * v2.x - v1.x * v2.z,
         v1.x * v2.y - v1.y * v2.x
     };
-    double mag = sqrt(cross.x * cross.x + cross.y * cross.y + cross.z * cross.z);
+    double mag = 1 / sqrt(cross.x * cross.x + cross.y * cross.y + cross.z * cross.z);
     
-    cross.x /= mag;
-    cross.y /= mag;
-    cross.z /= mag;
+    cross.x *= mag;
+    cross.y *= mag;
+    cross.z *= mag;
     
     return cross;
 }
@@ -172,14 +187,14 @@ struct Array4 {
 };
 
 // for ensuring little endianness as requierd by STL format
-void make_little_endian(uint32_t val, Array4 &buf) {
+inline void make_little_endian(uint32_t val, Array4 &buf) {
     for (int i = 0; i < 4; ++i) {
         buf.arr[i] = (char) (val & 0xff);
         val >>= 8;
     }
 }
 
-void make_little_endian(double val, Array4 &buf) {
+inline void make_little_endian(double val, Array4 &buf) {
     float valf = (float) val;
     return make_little_endian(*((uint32_t *) &valf), buf);
 }
@@ -203,21 +218,7 @@ inline void write_triangle(const Vec3 &a, const Vec3 &b, const Vec3 &c, const Ve
     out.write(zeros, 2);
 }
 
-// note: the data goes from west to east, then north to south
-void make_mesh(const string &nme, double llat, double ulat, double llon, double ulon) {
-    HgtData data(nme);
-    cout << data.get_data(1, 1) << "\n";
-    
-    llat = to_rad(llat);
-    ulat = to_rad(ulat);
-    llon = to_rad(llon);
-    ulon = to_rad(ulon);
-    
-    size_t size = data.size;
-    
-    Vec3 *points;
-    data.fill_points(points, llat, ulat, llon, ulon);
-    
+void export_stl(Vec3 *points, size_t size) {
     // export STL
     /* format from wikipedia:
     UINT8[80]    – Header                 - 80 bytes
@@ -231,7 +232,9 @@ void make_mesh(const string &nme, double llat, double ulat, double llon, double 
     end
     */
     
-    ofstream out("../resources/out.stl", ofstream::binary);
+    
+    
+    ofstream out("../viewer/out.stl", ofstream::binary);
     
     uint32_t num_triangles = (size - 1) * (size - 1) * 2;
     
@@ -255,13 +258,55 @@ void make_mesh(const string &nme, double llat, double ulat, double llon, double 
             Vec3 leftB = points[(i + 1) * size + j];
             Vec3 rightB = points[(i + 1) * size + j + 1];
             
-            Vec3 norm1 = normal(leftT, rightT, leftB);
-            Vec3 norm2 = normal(rightT, leftB, rightB);
+            Vec3 norm = normal(leftT, leftB, rightT);
             
-            write_triangle(leftT, rightT, leftB, norm1, out);
-            write_triangle(rightT, leftB, rightB, norm2, out);
+            write_triangle(leftT, leftB, rightT, norm, out);
+            write_triangle(rightT, leftB, rightB, norm, out);
         }
     }
+
+}
+
+void export_obj(Vec3 *points, size_t size) {
+    ofstream out("../viewer/out.obj");
+    
+    size_t N = size * size;
+    for (int i = 0; i < N; ++i) {
+        Vec3 point = points[i];
+        out << "v\t";
+        out << (float) point.x << "\t" << (float) point.y << "\t" << (float) point.z << "\n";
+    }
+    
+    for (int i = 0; i < size - 1; ++i) {
+        for (int j = 0; j < size - 1; ++j) {
+            size_t leftT = 1 + i * size + j;
+            size_t rightT = 1 + i * size + j + 1;
+            size_t leftB = 1 + (i + 1) * size + j;
+            size_t rightB = 1 + (i + 1) * size + j + 1;
+            out << "f\t";
+            out << leftT << " " << leftB << " " << rightB << " " << rightT << "\n";
+        }
+    }
+    out << "\n";
+}
+
+// note: the data goes from west to east, then north to south
+void make_mesh(const string &nme, double llat, double ulat, double llon, double ulon) {
+    HgtData data(nme);
+    cout << data.get_data(1, 1) << "\n";
+    
+    llat = to_rad(llat);
+    ulat = to_rad(ulat);
+    llon = to_rad(llon);
+    ulon = to_rad(ulon);
+    
+    size_t size = data.size;
+    Vec3 *points;
+    data.fill_points(points, llat, ulat, llon, ulon);
+    
+    export_obj(points, size);
+    
+    delete[] points;
 }
 
 int main() {
