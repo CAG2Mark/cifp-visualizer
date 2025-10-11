@@ -3,3 +3,4 @@ resources
 *.o
 *.obj
 cache
+*/.cache

@@ -3,16 +3,17 @@
     "arguments": [
       "/usr/bin/g++",
       "-c",
-      "-g",
       "-Wall",
+      "-O2",
       "-Isrc",
+      "-Iinclude",
       "-Ilib/cimg",
       "-o",
-      "src/sticher.o",
-      "src/sticher.cpp"
+      "src/cimg_wrapper.o",
+      "src/cimg_wrapper.cpp"
     ],
     "directory": "/storage/mark/Repos/COMP5411-project/sticher",
-    "file": "/storage/mark/Repos/COMP5411-project/sticher/src/sticher.cpp",
-    "output": "/storage/mark/Repos/COMP5411-project/sticher/src/sticher.o"
+    "file": "/storage/mark/Repos/COMP5411-project/sticher/src/cimg_wrapper.cpp",
+    "output": "/storage/mark/Repos/COMP5411-project/sticher/src/cimg_wrapper.o"
   }
 ]

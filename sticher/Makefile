@@ -1,6 +1,19 @@
 CC = g++
-CFLAGS = -g -Wall
-CFLAGS += -Isrc -Ilib/cimg
+CFLAGS = -Wall -O2
+CFLAGS += -Isrc -Iinclude -Ilib/cimg
+
+ifeq ($(OS),Windows_NT)
+    CFLAGS += -lgdi32
+else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+        CFLAGS += -lm -lpthread -lX11
+    endif
+    ifeq ($(UNAME_S),Darwin)
+        CFLAGS += -lm -lpthread -I/usr/X11R6/include -L/usr/X11R6/lib -lm -lpthread -lX11
+    endif
+endif
+
 
 SRC = $(wildcard src/**/*.cpp) $(wildcard src/*.cpp) $(wildcard src/**/**/*.cpp) $(wildcard src/**/**/**/*.cpp)
 OBJ = $(SRC:.cpp=.o)
