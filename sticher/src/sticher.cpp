@@ -153,8 +153,8 @@ class TileSticher {
     Vec2f wgs_low;
     Vec2f wgs_high;
     
-    Vec2f e3587_low;
-    Vec2f e3587_high;
+    Vec2i low;
+    Vec2i high;
     
     // NOTE: this is COLUMN major
     // this is for better cache locality
@@ -163,13 +163,10 @@ class TileSticher {
 public:
     TileSticher(string images_path, int lat, int lon, char zoom_level)
         : lat(lat), lon(lon), zoom_level(zoom_level) {
-        Vec2i low = wgsTo3857(Vec2f { (double) lat + 1, (double) lon }, zoom_level);
-        Vec2i high = wgsTo3857(Vec2f { (double) lat, (double) lon + 1 }, zoom_level);
+        low = wgsTo3857(Vec2f { (double) lat + 1, (double) lon }, zoom_level);
+        high = wgsTo3857(Vec2f { (double) lat, (double) lon + 1 }, zoom_level);
         min_x = low.x;
         min_y = low.y;
-        
-        e3587_low = wgsTo3857f(Vec2f { (double) lat + 1, (double) lon }, zoom_level);
-        e3587_high = wgsTo3857f(Vec2f { (double) lat, (double) lon + 1 }, zoom_level);
         
         low.print();
         high.print();
@@ -183,9 +180,6 @@ public:
         high_f.y = ceil(high_f.y);
         wgs_low = e3857ToWgs(low_f, zoom_level);
         wgs_high = e3857ToWgs(high_f, zoom_level);
-        
-        wgs_low.print();
-        wgs_high.print();
         
         rows = high.y - low.y + 1;
         cols = high.x - low.x + 1;
@@ -212,11 +206,6 @@ public:
                         
                         // transpose: switch to column major
                         data[col * rows * 256 + row] = tile.get(xx, yy);
-                        if (row == 1023 && col == 2) {
-                            cout << "got:\n";
-                            tile.get(xx, yy).print();
-                            get_at(col, row).print();
-                        }
                         auto tmp = get_at(col, row);
                         *img.data(row, col, 0, 0) = tmp.x;
                         *img.data(row, col, 0, 1) = tmp.y;
@@ -225,8 +214,6 @@ public:
                 }
             }
         }
-        
-        get_at(1023, 2).print();
 
         // img.cimg.save_jpeg("test2.jpg");
     }
@@ -236,42 +223,43 @@ public:
     }
     
     
-    CImgUC stich(u32 size) {
+    CImgUC stitch(u32 size) {
         // the images are uniform in the x direction, but not the y direction
         // we minify the y-direction first
      
         u32 width = cols * 256;
+        u32 height = 1 << (zoom_level - 1);
         
         u32 num_rows = rows * 256;
         
-        double x_step = (wgs_high.x - wgs_low.x) / width;
-        double y_step = (double) 1 / size;
+        double x_step = (wgs_high.y - wgs_low.y) / width;
+        double y_step = (double) 1 / height;
         
         double lat_start = lat;
         double lon_start = wgs_low.y;
         
-        CImgUC out_img(width, size);
+        CImgUC out_img(width, height);
         
         // process column by column
         for (u32 x = 0; x < width; ++x) {
-            for (u32 y = 0; y < size; ++y) {
+            for (u32 y = 0; y < height; ++y) {
                 // fills the pixel at position (x, y)
-                Vec2f latlon { lat_start + (size - y - 1) * y_step, lon_start + x * x_step };
+                Vec2f latlon { lat_start + (height - y - 1) * y_step, lon_start + x * x_step };
                 // we only care about the y coord here, x can be gotten directly here
                 Vec2f tile_c = wgsTo3857f(latlon, zoom_level);
                 
-                double y_c = 256 * (tile_c.y - e3587_low.y) - 1;
+                double y_c = 256 * (tile_c.y - low.y);
                 
                 // Get nearest y
                 int y_idx = clamp((int) std::round(y_c), 0, (int) num_rows - 1);
                 
                 // >= 0
-                double deriv = dy(TO_RAD * latlon.x, zoom_level) * num_rows / size;
+                double deriv = dy(TO_RAD * latlon.x, zoom_level) * num_rows / height;
                 
                 Vec3c pixel;
                 Vec3f pixel_f {0, 0, 0};
                 
-                if (deriv < 1.05f) {
+                if (true || deriv < 1.05f) {
                     // just directly take the pixel
                     pixel = get_at(x, y_idx);
                 } else {
@@ -301,8 +289,26 @@ public:
             }
         }
         
-        // size is uniform along x-axis, we can just resize linearly
-        out_img.cimg.resize(size, size, 1, 3, 5);
+        double lon_s = lon - lon_start;
+        double lon_e = lon_s + 1;
+        
+        if (lon_e > wgs_high.y) {
+            cout << "ERROR!" << "\n";
+        }
+        
+        double lon_width = wgs_high.y - wgs_low.y;
+        
+        int x_start = (int) (lon_s / lon_width * width);
+        int x_end = (int) (lon_e / lon_width * width) - 1;
+        
+        cout << x_start << " " << x_end << "\n";
+        
+        int x_size = (int) (cos(TO_RAD * clamp((double) max(lat, lat + 1), -85.05, 85.05)) * size);
+        // now eveything is in lat/long coordinates, and we can just resize linearly
+        // note that the x-y direction is not correct. we need to crop it first
+        out_img.cimg
+            .crop(x_start, x_end)
+            .resize(x_size, size, 1, 3, 5);
         
         out_img.cimg.save_jpeg("test.jpg");
         
@@ -311,12 +317,7 @@ public:
 };
 
 int main() {
-    ImageTile tile("../cache/images/Z13-6692-3575.png");
-    for (int i = 0; i < 10; ++i) {
-        tile.get(i, 0).print();
-    }
-    
     cout << sizeof(CImgUC) << "\n";
     
-    TileSticher("../cache/images", 22, 113, 13).stich(4096);
+    TileSticher("../cache/images", 78, 15, 12).stitch(2048);
 }
