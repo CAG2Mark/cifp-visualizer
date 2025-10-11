@@ -4,12 +4,12 @@ from downloaders import *
 
 logging.basicConfig(format='[%(asctime)s] %(name)s (%(levelname)s): %(message)s')
 logger = logging.getLogger("cifp-viewer")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARN)
 
 def clamp(x: float, a: float, b: float) -> float:
   return min(max(x, a), b)
 
-# https://en.wikipedia.org/wiki/Web_Mercator_projection
+# https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#ECMAScript_.28JavaScript.2FActionScript.2C_etc..29
 def wgsTo3857(lat: float, lon: float, zoom_level: int) -> tuple[int, int]:
   lat *= pi / 180
   lon *= pi / 180
@@ -26,11 +26,13 @@ def required3757Tiles(tile: Tile, zoom_level: int) -> list[Tile3587]:
   low_x, low_y = wgsTo3857(tile.lat + 1, tile.lon, zoom_level)
   high_x, high_y = wgsTo3857(tile.lat, tile.lon + 1, zoom_level)
   
+  print(low_x, low_y)
+  print(high_x, high_y)
+  
   tiles = []
   for x in range(low_x, high_x + 1):
     for y in range(low_y, high_y + 1):
       tiles.append(Tile3587(x, y, zoom_level))
-  
   return tiles
 
 def prepare_tiles(tiles: list[Tile], zoom_level: int):
@@ -45,6 +47,6 @@ def prepare_tiles(tiles: list[Tile], zoom_level: int):
     ans = required3757Tiles(tile, zoom_level)
     EoxDownloader(32).download_images(ans)
 
-prepare_tiles([Tile(22, 114)], 13)
+prepare_tiles([Tile(22, 113)], 10)
 
 # ImageDownloader().download_images([Tile3587(1, 2, 5)], 1, 0)
