@@ -47,6 +47,6 @@ def prepare_tiles(tiles: list[Tile], zoom_level: int):
     ans = required3757Tiles(tile, zoom_level)
     EoxDownloader(32).download_images(ans)
 
-prepare_tiles([Tile(22, 113)], 10)
+prepare_tiles([Tile(78, 15)], 12)
 
 # ImageDownloader().download_images([Tile3587(1, 2, 5)], 1, 0)
