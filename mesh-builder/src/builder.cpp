@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <cmath>
+#include <format>
 
 using namespace std;
 
@@ -266,21 +267,38 @@ void export_stl(Vec3 *points, size_t size) {
 void export_obj(Vec3 *points, size_t size) {
     ofstream out("../viewer/out.obj");
     
+    // vertices
     size_t N = size * size;
     for (size_t i = 0; i < N; ++i) {
         Vec3 point = points[i];
         out << "v\t";
         out << (float) point.x << "\t" << (float) point.y << "\t" << (float) point.z << "\n";
     }
-    
+
+    float step = (float) 1 / (size - 1);
+
+    // texture coordinates  
+    for (size_t i = 0; i < size; ++i) {
+        for (size_t j = 0; j < size; ++j) {
+            out << "vt\t" << j * step << "\t" << (size - i - 1) * step << "\n";
+        }
+    }
+
+    // faces
     for (size_t i = 0; i < size - 1; ++i) {
         for (size_t j = 0; j < size - 1; ++j) {
             size_t leftT = 1 + i * size + j;
             size_t rightT = 1 + i * size + j + 1;
             size_t leftB = 1 + (i + 1) * size + j;
             size_t rightB = 1 + (i + 1) * size + j + 1;
-            out << "f\t";
-            out << leftT << " " << leftB << " " << rightB << " " << rightT << "\n";
+            string ln = std::format(
+                "f\t{}/{}\t{}/{}\t{}/{}\t{}/{}",
+                leftT, leftT,
+                leftB, leftB,
+                rightB, rightB,
+                rightT, rightT
+            );
+            out << ln << "\n";
         }
     }
     out << "\n";
@@ -306,5 +324,5 @@ void make_mesh(const string &nme, double llat, double ulat, double llon, double 
 }
 
 int main() {
-    make_mesh("../resources/N27E089.hgt", 37, 38, 72, 73);
+    make_mesh("../resources/N22E113.hgt", 22, 23, 113, 114);
 }

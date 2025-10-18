@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -std=c++20
 CFLAGS += -Isrc
 
 SRC = $(wildcard src/**/*.cpp) $(wildcard src/*.cpp) $(wildcard src/**/**/*.cpp) $(wildcard src/**/**/**/*.cpp)

@@ -4,7 +4,7 @@ from downloaders import *
 
 logging.basicConfig(format='[%(asctime)s] %(name)s (%(levelname)s): %(message)s')
 logger = logging.getLogger("cifp-viewer")
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 
 def clamp(x: float, a: float, b: float) -> float:
   return min(max(x, a), b)
@@ -47,6 +47,6 @@ def prepare_tiles(tiles: list[Tile], zoom_level: int):
     ans = required3757Tiles(tile, zoom_level)
     EoxDownloader(32).download_images(ans)
 
-prepare_tiles([Tile(78, 15)], 12)
+prepare_tiles([Tile(27, 89)], 12)
 
 # ImageDownloader().download_images([Tile3587(1, 2, 5)], 1, 0)

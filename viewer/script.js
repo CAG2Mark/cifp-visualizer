@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STLLoader } from 'three/addons/loaders/STLLoader.js'
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 
 
@@ -21,18 +21,33 @@ function init() {
     let light = new THREE.DirectionalLight(0xffffff);
     light.position.set(100, 200, 400);
     scene.add(light);
-    
-    const loader = new OBJLoader();
-    loader.load(
-        'out.obj',
-        function (object) {
-            scene.add(object);
-        },
-        (xhr) => {
-            console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
-        },
-        (error) => {
-            console.log(error)
+
+    let mtl = new MTLLoader();
+    mtl.load(
+        'test.mtl',
+        function (materials) {
+            materials.preload();
+            const loader = new OBJLoader();
+            loader.setMaterials(materials);
+            loader.load(
+                'out.obj',
+                function (object) {
+                    var texture = new THREE.TextureLoader().load("test.jpg");
+
+                    object.traverse(function (child) {   // aka setTexture
+                        if (child instanceof THREE.Mesh) {
+                            child.material.map = texture;
+                        }
+                    });
+                    scene.add(object);
+                },
+                (xhr) => {
+                    console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
+                },
+                (error) => {
+                    console.log(error)
+                }
+            )
         }
     )
 

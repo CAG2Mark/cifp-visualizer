@@ -259,7 +259,7 @@ public:
                 Vec3c pixel;
                 Vec3f pixel_f {0, 0, 0};
                 
-                if (true || deriv < 1.05f) {
+                if (deriv < 1.05f) {
                     // just directly take the pixel
                     pixel = get_at(x, y_idx);
                 } else {
@@ -269,7 +269,7 @@ public:
                     for (int i = -deriv_ceil + 1; i < deriv_ceil; ++i) {
                         int idx = y_idx + i;
                         if (idx < 0 || idx >= (int) num_rows) continue;
-                        double weight = gaussian(y_c, deriv, idx);
+                        double weight = gaussian(y_c, deriv / 2, idx);
                         total_weight += weight;
                         Vec3c pix = get_at(x, idx);
                         pixel_f.x += weight * pix.x;
@@ -319,5 +319,5 @@ public:
 int main() {
     cout << sizeof(CImgUC) << "\n";
     
-    TileSticher("../cache/images", 78, 15, 12).stitch(2048);
+    TileSticher("../cache/images", 22, 113, 13).stitch(4096);
 }
