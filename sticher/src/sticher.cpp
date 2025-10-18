@@ -1,6 +1,5 @@
 #include <cimg_wrapper.h>
 #include <algorithm>
-#include <array>
 #include <cstdint>
 #include <string>
 #include <cmath>
@@ -70,7 +69,12 @@ public:
     int y;
     int zoom_level;
     bool inited = false;
+    bool failed = false;
     CImgUC img;
+    
+    ImageTile() : img(CImgUC(256, 256)) {
+        
+    }
     
     ImageTile(const string fileName) : img(CImgUC(fileName.c_str())) {
         int width = img.width();
@@ -78,6 +82,7 @@ public:
         
         if (width != 256 || height != 256) {
             cout << "ERROR: Image is not of size 256x256." << "\n";
+            exit(1);
             return;
         }
         
@@ -85,10 +90,18 @@ public:
     }
     
     Vec3c get(u8 x, u8 y) {
-        u8 *r = img.data(x, y, 0, 0);
-        u8 *g = img.data(x, y, 0, 1);
-        u8 *b = img.data(x, y, 0, 2);
-        return Vec3c { *r, *g, *b };
+        if (img.dimensions() == 3) {
+            u8 *r = img.data(x, y, 0, 0);
+            u8 *g = img.data(x, y, 0, 1);
+            u8 *b = img.data(x, y, 0, 2);
+            return Vec3c { *r, *g, *b };
+        }
+        u8 v = *img.data(x, y, 0, 0);
+        return Vec3c { v, v, v };
+    }
+    
+    void fill_white() {
+        img.fill(255, 255, 255);
     }
 };
 
@@ -168,9 +181,6 @@ public:
         min_x = low.x;
         min_y = low.y;
         
-        low.print();
-        high.print();
-        
         Vec2f low_f = wgsTo3857f(Vec2f { (double) lat, (double) lon }, zoom_level);
         Vec2f high_f = wgsTo3857f(Vec2f { (double) lat + 1, (double) lon + 1 }, zoom_level);
         
@@ -192,8 +202,15 @@ public:
             for (u32 j = 0; j < cols; ++j) {
                 u32 tile_x = j + min_x;
                 u32 tile_y = i + min_y;
-                string filename = std::format("{}/Z{}-{}-{}.jpg", images_path, (int) zoom_level, tile_x, tile_y);
-                ImageTile tile(filename);
+                
+                ImageTile tile;
+                try {
+                    string filename = std::format("{}/Z{}-{}-{}.jpg", images_path, (int) zoom_level, tile_x, tile_y);
+                    tile = ImageTile(filename);
+                } catch (CImgException& e) {
+                    // just use a white image (which is what the web services return if there is a failure)
+                    tile.fill_white();
+                }
                 
                 u32 start_row = i * 256;
                 u32 start_col = j * 256;
@@ -214,8 +231,6 @@ public:
                 }
             }
         }
-
-        // img.cimg.save_jpeg("test2.jpg");
     }
     
     Vec3c get_at(u32 x, u32 y) {
@@ -277,9 +292,9 @@ public:
                         pixel_f.z += weight * pix.z;
                     }
                     pixel = {
-                        (u8) (pixel_f.x / total_weight),
-                        (u8) (pixel_f.y / total_weight),
-                        (u8) (pixel_f.z / total_weight)
+                        (u8) clamp(pixel_f.x / total_weight, (double) 0, (double) 255),
+                        (u8) clamp(pixel_f.y / total_weight, (double) 0, (double) 255),
+                        (u8) clamp(pixel_f.z / total_weight, (double) 0, (double) 255)
                     };
                 }
 
@@ -294,6 +309,7 @@ public:
         
         if (lon_e > wgs_high.y) {
             cout << "ERROR!" << "\n";
+            exit(1);
         }
         
         double lon_width = wgs_high.y - wgs_low.y;
@@ -301,23 +317,29 @@ public:
         int x_start = (int) (lon_s / lon_width * width);
         int x_end = (int) (lon_e / lon_width * width) - 1;
         
-        cout << x_start << " " << x_end << "\n";
-        
         int x_size = (int) (cos(TO_RAD * clamp((double) max(lat, lat + 1), -85.05, 85.05)) * size);
         // now eveything is in lat/long coordinates, and we can just resize linearly
         // note that the x-y direction is not correct. we need to crop it first
-        out_img.cimg
+
+        return out_img
             .crop(x_start, x_end)
             .resize(x_size, size, 1, 3, 5);
-        
-        out_img.cimg.save_jpeg("test.jpg");
-        
-        return out_img;
     }
 };
 
-int main() {
-    cout << sizeof(CImgUC) << "\n";
+int main(int argc, char *argv[]) {
+    int lat, lon, zl;
     
-    TileSticher("../cache/images", 22, 113, 13).stitch(4096);
+    if (argc != 4) {
+        cout << "Incorrect number of arguments\n";
+        return 1;
+    }
+    
+    lat = stoi(argv[1]);
+    lon = stoi(argv[2]);
+    zl = stoi(argv[3]);
+    
+    CImgUC img = TileSticher("cache/images", lat, lon, zl).stitch(1 << (zl - 1));
+    string out_file = format("cache/tileimg/Z{}-{}-{}.jpg", zl, lat, lon);
+    img.save_jpeg(out_file.c_str());
 }

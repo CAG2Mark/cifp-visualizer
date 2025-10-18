@@ -6,10 +6,11 @@ from urllib.error import URLError
 from urllib.request import urlopen
 import os
 import logging
+import shutil
 
 logger = logging.getLogger("cifp-viewer")
 
-@dataclass
+@dataclass(frozen=True)
 class Tile:
   lat: int
   lon: int
@@ -21,17 +22,24 @@ class Tile3587:
   zoom: int
 
 class ThreadedDownloader:
-  def __init__(self, queue_size: int, content_type: str) -> None:
+  def __init__(self, queue_size: int, content_type: str, default, do_log = True) -> None:
     self.fail_reasons = []
     self.queue_size = queue_size
     self.content_type = content_type
-  
-  fail_lock = Lock()
+    self.do_log = do_log
+    self.default = default
+    
+    self.download_size = 0
+    self.urls = []
+    
+  def log_info(self, msg):
+    if self.do_log: logger.info(msg)
+
   queue_lock = Lock()
   
   def get_progress(self):
     with self.queue_lock:
-      return len(self.urls, self.download_size)
+      return self.download_size - len(self.urls), self.download_size
   
   # 0 = downloaded
   # 1 = cache hit
@@ -48,18 +56,19 @@ class ThreadedDownloader:
         body = response.read()
         contenttype = response.getheader("content-type")
         
-        with self.fail_lock:
-          if contenttype is None or contenttype != self.content_type:
-            return (2, f"Request to `{url}` did not return an image")
-          if response.status != 200 and response.status != "304":
-            return (2, f"Error {response.status} for request `{url}`: {response.reason}")
+        if contenttype is None or contenttype != self.content_type:
+          self.default(url, file)
+          return (2, f"Request to `{url}` did not return the expected content type of {self.content_type}.")
+        if response.status != 200 and response.status != "304":
+          self.default(url, file)
+          return (2, f"Error {response.status} for request `{url}`: {response.reason}")
 
         with open(file, "wb") as f:
           f.write(body)
         
     except URLError as e:
-      with self.fail_lock:
-        return (2, str(e))
+      self.default(url, file)
+      return (2, str(e))
     
     return (0, "")
       
@@ -68,14 +77,14 @@ class ThreadedDownloader:
       with self.queue_lock:
         if len(urls) == 0: return
         url, name, file = urls.pop()
-      logger.info(f"Downloading {name}...")
+      self.log_info(f"Downloading {name}...")
       res, reason = self.download_url((url, file))
       if res == 0:
-        logger.info(f"{name} downloaded.")
+        self.log_info(f"{name} downloaded.")
       elif res == 1:
-        logger.info(f"{name} exists in the cache. Skipping.")
+        self.log_info(f"{name} exists in the cache. Skipping.")
       elif res == 2:
-        logger.info(f"Failed to download {name} from {url}: {reason}")
+        self.log_info(f"Failed to download {name} from {url}: {reason}")
 
   # urls: url, nickname, file
   def download_urls(self, urls: list[str, str, str]):
@@ -98,10 +107,20 @@ class ThreadedDownloader:
 
 class EoxDownloader(ThreadedDownloader):
   def __init__(self, queue_size: int) -> None:
-    ThreadedDownloader.__init__(self, queue_size, "image/jpeg")
+    ThreadedDownloader.__init__(self, queue_size, "image/jpeg", self.default_file)
     self.fail_reasons = []
+    
+  def default_file(self, url, file):
+    shutil.copyfile("assets/white.jpg", file)
 
   def download_images(self, tiles: list[Tile3587]):
+    if not os.path.exists("cache"):
+      os.mkdir("cache")
+    if not os.path.exists("cache/images"):
+      os.mkdir("cache/images")
+    if not os.path.exists("cache/dem"):
+      os.mkdir("cache/dem")
+      
     # https://tiles.maps.eox.at/wmts/1.0.0/WMTSCapabilities.xml
     urls = [
       (

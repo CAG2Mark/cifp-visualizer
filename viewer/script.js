@@ -7,13 +7,20 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 var controls;
 var camera, scene, renderer;
 var mesh;
+function test() {
+    let a = fetch("../photo/22/113/13.jpg");
+    // let b = fetch("../terrain/22/113/0.obj");
+    // let c = fetch("../model/model.mtl");
+}
 
-init();
-animate();
+test();
+
+// init();
+// animate();
 
 function init() {
 
-    camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
     camera.position.z = 5;
 
     scene = new THREE.Scene();
@@ -55,18 +62,20 @@ function init() {
     renderer = new THREE.WebGLRenderer();
 
     // set the background color to gray
-    renderer.setClearColor( 0xa0a0a0 );
+    renderer.setClearColor(0xa0a0a0);
+    
+    let renderArea = document.getElementById("render-area");
 
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    document.body.appendChild( renderer.domElement );
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderArea.appendChild(renderer.domElement);
 
     // let's have the mouse affect the view
-    controls = new OrbitControls( camera, renderer.domElement );
+    controls = new OrbitControls(camera, renderer.domElement);
 
     //
 
-    window.addEventListener( 'resize', onWindowResize, false );
+    window.addEventListener('resize', onWindowResize, false);
 
 }
 
@@ -75,19 +84,19 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
 
-    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize(window.innerWidth, window.innerHeight);
 
 }
 
 function animate() {
 
-    requestAnimationFrame( animate );
+    requestAnimationFrame(animate);
 
     // auto-rotation at start - turn it off
     //mesh.rotation.x += 0.005;
     //mesh.rotation.y += 0.01;
 
-    renderer.render( scene, camera );
+    renderer.render(scene, camera);
     // have the mouse update the view
     controls.update();
 
