@@ -107,14 +107,17 @@ public:
     }
     
     Vec3 toPoint(const IdxLatLon &idx) {
-        int64_t hgt = get_data(idx.row, idx.col);
+        int16_t hgt = get_data(idx.row, idx.col);
         if (hgt == -32768) hgt = 0;
         double radius = EARTH_RAD + to_nm(hgt);
         
+        // NOTE: in ThreeJS, the x/z axes are different from what we expect from
+        // an x/y plane, namely if x is facing right, and y faces up, z faces backwards
+        // it is necessary to invert the z
         return Vec3 {
             radius * cos(idx.lat) * cos(idx.lon),
             radius * sin(idx.lat),
-            radius * cos(idx.lat) * sin(idx.lon)
+            - radius * cos(idx.lat) * sin(idx.lon)
         };
         
     };
@@ -124,25 +127,11 @@ public:
         double latstep = (ulat - llat) / (size - 1);
         double lonstep = (ulong - llon) / (size - 1);
         
-        bool first = true;
-        double firstX;
-        double firstY;
-        double firstZ;
-    
         for (size_t i = 0; i < size; ++i) {
             for (size_t j = 0; j < size; ++j) {
-                IdxLatLon cur = { i, j, llat + latstep * i, llon + lonstep * j };
-                if (first) {
-                    Vec3 point = toPoint(cur);
-                    points[i * size + j] = {0, 0, 0};
-                    firstX = point.x;
-                    firstY = point.y;
-                    firstZ = point.z;
-                    first = false;
-                } else {
-                    Vec3 point = toPoint(cur);
-                    points[i * size + j] = { point.x - firstX, point.y - firstY, point.z - firstZ };
-                }
+                IdxLatLon cur = { i, j, llat + latstep * (size - i - 1), llon + lonstep * j };
+                Vec3 point = toPoint(cur);
+                points[i * size + j] = { point.x, point.y, point.z };
             }
         }
     }
@@ -264,8 +253,8 @@ void export_stl(Vec3 *points, size_t size) {
 
 }
 
-void export_obj(Vec3 *points, size_t size) {
-    ofstream out("../viewer/out.obj");
+void export_obj(Vec3 *points, size_t size, const string &filename) {
+    ofstream out(filename);
     
     // vertices
     size_t N = size * size;
@@ -305,9 +294,8 @@ void export_obj(Vec3 *points, size_t size) {
 }
 
 // note: the data goes from west to east, then north to south
-void make_mesh(const string &nme, double llat, double ulat, double llon, double ulon) {
+void make_mesh(const string &nme, const string &filename, double llat, double ulat, double llon, double ulon) {
     HgtData data(nme);
-    cout << data.get_data(1, 1) << "\n";
     
     llat = to_rad(llat);
     ulat = to_rad(ulat);
@@ -318,11 +306,38 @@ void make_mesh(const string &nme, double llat, double ulat, double llon, double 
     Vec3 *points;
     data.fill_points(points, llat, ulat, llon, ulon);
     
-    export_obj(points, size);
+    export_obj(points, size, filename);
     
     delete[] points;
 }
 
-int main() {
-    make_mesh("../resources/N22E113.hgt", 22, 23, 113, 114);
+int main(int argc, char *argv[]) {
+    int lat, lon;
+    if (argc != 3) {
+        cout << "Incorrect number of arguments\n";
+        return 1;
+    }
+    
+    lat = stoi(argv[1]);
+    lon = stoi(argv[2]);
+    
+    int latu = lat + 1;
+    int lonu = lon + 1;
+    
+    char NS, WE;
+    if (lat < 0) NS = 'S';
+    else NS = 'N';
+    if (lon < 0) WE = 'W';
+    else WE = 'E';
+    
+    string lats = to_string(abs(lat));
+    lats.insert(lats.begin(), 2 - lats.length(), '0');
+    
+    string lons = to_string(abs(lon));
+    lons.insert(lons.begin(), 3 - lons.length(), '0');
+    
+    string file = std::format("cache/dem/{}{}{}{}.hgt", NS, lats, WE, lons);
+    string out = std::format("cache/tilemesh/DEM_{}_{}.obj", lat, lon);
+    
+    make_mesh(file, out, lat, latu, lon, lonu);
 }

@@ -180,16 +180,9 @@ public:
         high = wgsTo3857(Vec2f { (double) lat, (double) lon + 1 }, zoom_level);
         min_x = low.x;
         min_y = low.y;
-        
-        Vec2f low_f = wgsTo3857f(Vec2f { (double) lat, (double) lon }, zoom_level);
-        Vec2f high_f = wgsTo3857f(Vec2f { (double) lat + 1, (double) lon + 1 }, zoom_level);
-        
-        low_f.x = floor(low_f.x);
-        low_f.y = floor(low_f.y);
-        high_f.x = ceil(high_f.x);
-        high_f.y = ceil(high_f.y);
-        wgs_low = e3857ToWgs(low_f, zoom_level);
-        wgs_high = e3857ToWgs(high_f, zoom_level);
+
+        wgs_low = e3857ToWgs(Vec2f { (double) low.x, (double) high.y + 1 }, zoom_level);
+        wgs_high = e3857ToWgs(Vec2f { (double) high.x + 1, (double) low.x }, zoom_level);
         
         rows = high.y - low.y + 1;
         cols = high.x - low.x + 1;
@@ -312,6 +305,11 @@ public:
             exit(1);
         }
         
+        low.print();
+        high.print();
+        wgs_low.print();
+        wgs_high.print();
+        
         double lon_width = wgs_high.y - wgs_low.y;
         
         int x_start = (int) (lon_s / lon_width * width);
@@ -321,6 +319,7 @@ public:
         // now eveything is in lat/long coordinates, and we can just resize linearly
         // note that the x-y direction is not correct. we need to crop it first
 
+        cout << x_start << " " << x_end << "\n";
         return out_img
             .crop(x_start, x_end)
             .resize(x_size, size, 1, 3, 5);

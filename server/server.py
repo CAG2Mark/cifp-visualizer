@@ -24,6 +24,12 @@ class CIFPServer(BaseHTTPRequestHandler):
   
   img_jobs_lock = Lock()
   img_jobs: dict[str, Job] = {}
+
+  zip_jobs_lock = Lock()
+  zip_jobs: dict[str, Job] = {}
+
+  terr_jobs_lock = Lock()
+  terr_jobs: dict[str, Job] = {}
   
   
   def send_malformed(self, msg = None):
@@ -39,6 +45,16 @@ class CIFPServer(BaseHTTPRequestHandler):
     with self.img_jobs_lock:
       if job.path in self.img_jobs:
        del self.img_jobs[job.path]
+       
+  def zip_job_done(self, job: Job):
+    with self.zip_jobs_lock:
+      if job.path in self.zip_jobs:
+       del self.zip_jobs[job.path]
+
+  def terr_job_done(self, job: Job):
+    with self.terr_jobs_lock:
+      if job.path in self.terr_jobs:
+       del self.terr_jobs[job.path]
   
   def do_GET(self):
     values = self.path.split("/")[1:]
@@ -59,7 +75,6 @@ class CIFPServer(BaseHTTPRequestHandler):
     if head == "viewer":
       if len(values) > 0:
         path = "viewer/" + "/".join(values)
-        print(path)
         if os.path.exists(path):
           if values[-1].endswith(".html"):
             ct = "text/html"
@@ -67,6 +82,8 @@ class CIFPServer(BaseHTTPRequestHandler):
             ct = "text/css"
           elif values[-1].endswith(".js"):
             ct = "text/javascript"
+          elif values[-1].endswith(".mtl"):
+            ct = "model/mtl"
           else:
             self.send_response(404)
             self.end_headers()
@@ -79,6 +96,10 @@ class CIFPServer(BaseHTTPRequestHandler):
           self.send_header("Content-type", ct)
           self.end_headers()
           self.wfile.write(content)
+        else:
+          self.send_response(404)
+          self.end_headers()
+          return
     elif head == "photo":
       if len(values) != 3 or not values[-1].endswith(".jpg"):
         self.send_malformed("Incorrect format. Expected: photo/lat/lon/zl.jpg")
@@ -115,7 +136,7 @@ class CIFPServer(BaseHTTPRequestHandler):
       elif not os.path.exists(path):
         logger.info(f"Dispatching job to create image {lat}/{lon}/{zl}.jpg.")
         # create job
-        job = DownloadImagesJob(self.img_job_done, tiler.Tile(lat, lon), zl, path)
+        job = CreateImageJob(self.img_job_done, tiler.Tile(lat, lon), zl, path)
         self.img_jobs[path] = job
         job.perform()
         
@@ -127,6 +148,88 @@ class CIFPServer(BaseHTTPRequestHandler):
         content = get_file_bytes(path)
         self.send_response(200)
         self.send_header("Content-type", "image/jpeg")
+        self.end_headers()
+        self.wfile.write(content)
+        
+    elif head == "terrain":
+      if len(values) != 3 or not values[-1].endswith(".obj"):
+        self.send_malformed("Incorrect format. Expected: terain/lat/lon/lod.obj")
+        return
+      lat, lon, lod = values
+      lod = lod[:-4]
+      try:
+        lat = int(lat)
+        lon = int(lon)
+        lod = int(lod)
+      except:
+        self.send_malformed("Incorrect format. Expected: terain/lat/lon/lod.zip")
+        return
+      if not validate_tile(lat, lon):
+        self.send_malformed("Latitude and longitude out of range.")
+        return
+      if not 0 <= lod <= 1:
+        self.send_malformed("LOD must be between 0 and 1.")
+        return
+      
+      # NOTE: we MUST check if the job exists first
+      # the file could exist but the job could still be running!
+      
+      # 1. download zip job
+      tile = tiler.Tile(lat, lon)
+      filename = tiler.get_vfp_file(tile).split("/")[-1]
+      path = f"cache/demzip/{filename}.zip"
+      with self.zip_jobs_lock:
+        working = path in self.zip_jobs
+        if working: cur_job = self.zip_jobs[path]
+      
+      if working:
+        self.send_response(202)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(bytes(cur_job.progress(), "UTF-8"))
+        return
+      elif not os.path.exists(path):
+        logger.info(f"Dispatching job to download {path}.zip")
+        # create job
+        job = DownloadDemJob(self.zip_job_done, tiler.Tile(lat, lon), path)
+        self.zip_jobs[path] = job
+        job.perform()
+        
+        self.send_response(202)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(bytes("Initializing...", "UTF-8"))
+        return
+      
+      # 2. create mesh
+      path = f"cache/tilemesh/DEM_{lat}_{lon}.obj"
+      with self.terr_jobs_lock:
+        working = path in self.terr_jobs
+        if working: cur_job = self.terr_jobs[path]
+      
+      if working:
+        self.send_response(202)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(bytes(cur_job.progress(), "UTF-8"))
+        return
+      elif not os.path.exists(path):
+        logger.info(f"Dispatching job to create {path}.obj")
+        # create job
+        job = MakeMeshJob(self.terr_job_done, tiler.Tile(lat, lon), lod,  path)
+        self.terr_jobs[path] = job
+        job.perform()
+        
+        self.send_response(202)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(bytes(job.progress(), "UTF-8"))
+        return
+      else:
+        content = get_file_bytes(path)
+        self.send_response(200)
+        self.send_header("Content-type", "model/obj")
+        # self.send_header("Content-Encoding", "gzip")
         self.end_headers()
         self.wfile.write(content)
   

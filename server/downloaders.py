@@ -118,8 +118,6 @@ class EoxDownloader(ThreadedDownloader):
       os.mkdir("cache")
     if not os.path.exists("cache/images"):
       os.mkdir("cache/images")
-    if not os.path.exists("cache/dem"):
-      os.mkdir("cache/dem")
       
     # https://tiles.maps.eox.at/wmts/1.0.0/WMTSCapabilities.xml
     urls = [
@@ -129,6 +127,34 @@ class EoxDownloader(ThreadedDownloader):
         f"cache/images/Z{tile.zoom}-{tile.x}-{tile.y}.jpg"
       )
       for tile in tiles
+    ]
+    
+    self.download_urls(urls)
+
+class VFPDownloader(ThreadedDownloader):
+  def __init__(self, queue_size: int) -> None:
+    ThreadedDownloader.__init__(self, queue_size, "application/zip", self.default_file)
+    self.fail_reasons = []
+    
+  def default_file(self, url, file):
+    pass
+
+  def download_file(self, file: str):
+    if not os.path.exists("cache"):
+      os.mkdir("cache")
+    if not os.path.exists("cache/demzip"):
+      os.mkdir("cache/demzip")
+    if not os.path.exists("cache/dem"):
+      os.mkdir("cache/dem")
+      
+    path = file.split("/")[-1]
+    
+    urls = [
+      (
+        f"https://viewfinderpanoramas.org/{file}.zip",
+        file,
+        f"cache/demzip/{path}.zip"
+      )
     ]
     
     self.download_urls(urls)

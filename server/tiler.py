@@ -45,7 +45,7 @@ def get_vfp_file(tile: Tile):
   
   # special cases, by inspecting the files themselves
   if -90 <= lat <= -66 and 90 <= lon <= 179:
-    return "ANTDEM/46-60"
+    return "ANTDEM3/46-60"
   if 59 <= lat <= 63 and -52 <= lon <= -41:
     return "dem3/GL-South"
   if 75 <= lat <= 83 and -78 <= lon <= -12:
@@ -55,15 +55,15 @@ def get_vfp_file(tile: Tile):
   if 63 <= lat <= 66 and -25 <= lon <= -14:
     return "dem3/ISL"
   if -90 <= lat <= -66 and 0 <= lon <= 89:
-    return "ANTDEM/31-45"
+    return "ANTDEM3/31-45"
   if 64 <= lat <= 75 and -42 <= lon <= -18:
     return "dem3/GL-East"
   if -90 <= lat <= -62 and -90 <= lon <= -1:
-    return "ANTDEM/16-30"
+    return "ANTDEM3/16-30"
   if 64 <= lat <= 75 and -68 <= lon <= -43:
     return "dem3/GL-West"
   if -90 <= lat <= -72 and -180 <= lon <= -91:
-    return "ANTDEM/01-15"
+    return "ANTDEM3/01-15"
   if 74 <= lat <= 74 and 18 <= lon <= 19:
     return "dem3/BEAR"
   if 60 <= lat <= 60 and -3 <= lon <= -1:
@@ -86,6 +86,8 @@ def get_vfp_file(tile: Tile):
     if letter == "R" and 33 <= horizontal <= 38: v2 = True
   
   return "dem3/" + ("S" if south else "") + letter + str(horizontal) + ("v2" if v2 else "")
+
+
 
 if __name__ == "__main__":
   # testing
