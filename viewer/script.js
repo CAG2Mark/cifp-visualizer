@@ -1,14 +1,10 @@
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 
 var TO_RAD = Math.PI / 180;
 
-var controls;
 var camera, scene, renderer;
-var mesh;
 var lat = 47, lon = 11;
 var latR = TO_RAD * lat;
 var lonR = TO_RAD * lon;
@@ -26,7 +22,6 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ensure_url("../photo/22/113/13.jpg");
 async function ensure_url(url) {
     while (true) {
         let res = await fetch(url);
@@ -117,6 +112,7 @@ let mouseY = 0;
 let mouseXOld = 0;
 let mouseYOld = 0;
 let mouseFirst = false;
+let touching = false;
 
 let cameraHdg = 0; // initially north
 let cameraUpDown = 0; // initially level with the ground
@@ -144,16 +140,6 @@ function init() {
     scene.add(light);
 
     renderer = new THREE.WebGLRenderer();
-    
-    if (false) {
-        // add a ground plane
-        var geometry = new THREE.PlaneGeometry( 1000, 1000 );
-        var material = new THREE.MeshPhongMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
-        var plane = new THREE.Mesh( geometry, material );
-        plane.rotation.x = 90 * Math.PI / 180;
-        plane.position.y = -100.01;
-        scene.add( plane );
-    }
 
     // set the background color to gray
     renderer.setClearColor(0xa0a0a0);
@@ -164,14 +150,9 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderArea.appendChild(renderer.domElement);
 
-    // let's have the mouse affect the view
-    // controls = new PointerLockControls(camera, renderer.domElement);
-
     //
 
     window.addEventListener('resize', onWindowResize, false);
-
-    // window.addEventListener('click', () => controls.lock());
     renderArea.addEventListener('mousedown', (e) => { 
         mouseFirst = true; isMouseDown = true;
     });
@@ -182,9 +163,17 @@ function init() {
     
     renderArea.addEventListener('mouseup', () => isMouseDown = false);
     renderArea.addEventListener('mouseleave', () => isMouseDown = false);
-    renderArea.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; })
-
-    // scene.add(controls.object);
+    renderArea.addEventListener('mousemove', (e) => { if (!touching) { mouseX = e.clientX; mouseY = e.clientY; } })
+    
+    renderArea.addEventListener('touchstart', (e) => {
+        mouseFirst = true; isMouseDown = true; touching = true;
+        mouseX = -e.touches[0].clientX;
+        mouseY = -e.touches[0].clientY;
+    });
+    
+    renderArea.addEventListener('touchmove', (e) => { mouseX = -e.touches[0].clientX; mouseY = -e.touches[0].clientY;})
+    renderArea.addEventListener('touchend', () => { isMouseDown = false; touching = false; });
+    renderArea.addEventListener('touchcancel', () => { isMouseDown = false; touching = false; });
 
     const onKeyDown = function (event) {
         switch (event.code) {
@@ -264,9 +253,6 @@ function onWindowResize() {
 function animate() {
 
     requestAnimationFrame(animate);
-    // auto-rotation at start - turn it off
-    //mesh.rotation.x += 0.005;
-    //mesh.rotation.y += 0.01;
     let vel = 0.025;
     
     let tmp = window.performance.now();
@@ -302,8 +288,8 @@ function animate() {
             let xDel = mouseX - mouseXOld;
             let yDel = mouseY - mouseYOld;
             
-            cameraHdg -= xDel / 15 * TO_RAD * timeFactor;
-            cameraUpDown -= yDel / 15 * TO_RAD * timeFactor;
+            cameraHdg -= xDel / 7 * TO_RAD * timeFactor;
+            cameraUpDown -= yDel / 7 * TO_RAD * timeFactor;
             
             cameraUpDown = Math.max(Math.min(cameraUpDown, UPDOWN_BOUND), -UPDOWN_BOUND);
         }
@@ -328,39 +314,42 @@ function animate() {
     a.multiplyScalar(timeFactor);
     
     camera.position.add(a);
-    // console.log(camera.up);
     
     if (isMouseDown) {
-        // vector looking straight forward, combined with heading
-        let forward = new THREE.Vector3(
-            Math.cos(latR) * Math.sin(lonR + cameraHdg),
+        // create an orthonormal frame
+        
+        let east = new THREE.Vector3(
+            -Math.cos(latR) * Math.sin(lonR),
             0,
-            Math.cos(latR) * Math.cos(lonR + cameraHdg),
-        ).cross(UP);
+            -Math.cos(latR) * Math.cos(lonR),
+        ).normalize();
+        
+        let north = new THREE.Vector3();
+        north.crossVectors(UP, east);
+        
+        let eastCopy = new THREE.Vector3();
+        eastCopy.copy(east);
+        eastCopy.multiplyScalar(-Math.sin(cameraHdg))
+        
+        let forward = new THREE.Vector3();
+        forward.copy(north).multiplyScalar(Math.cos(cameraHdg)).add(eastCopy);
         
         // combine with up/down angle
         let upCopy = new THREE.Vector3(
             UP.x, UP.y, UP.z
         ).multiplyScalar(Math.sin(cameraUpDown));
         
-        console.log(cameraUpDown);
         // combine with up/down angle
         forward
             .multiplyScalar(Math.cos(cameraUpDown))
             .add(upCopy)
+        
+        console.log(cameraHdg, cameraUpDown);
             
         forward.add(camera.position);
 
         camera.lookAt(forward);
     }
     
-
-    // controls.moveForward(velA);
-    // controls.moveRight(velB);
-    
     renderer.render(scene, camera);
-    // have the mouse update the view
-    // controls.update();
-
-    // console.log(camera.position)
 }
