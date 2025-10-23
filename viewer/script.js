@@ -5,7 +5,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 var TO_RAD = Math.PI / 180;
 
 var camera, scene, renderer;
-var lat = 47, lon = 11;
+var lat = 62, lon = -8;
 var latR = TO_RAD * lat;
 var lonR = TO_RAD * lon;
 var UPDOWN_BOUND = 87 * TO_RAD;
@@ -123,7 +123,7 @@ init();
 last_update = window.performance.now();
 animate();
 
-let a = load_tile(lat, lon, 14);
+let a = load_tile(lat, lon, 13);
 // let b = load_tile(lat, lon + 1, 13);
 // let c = load_tile(lat, lon + 2, 13);
 Promise.all([a, b, c]);

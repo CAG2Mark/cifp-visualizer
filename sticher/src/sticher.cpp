@@ -181,8 +181,8 @@ public:
         min_x = low.x;
         min_y = low.y;
 
-        wgs_low = e3857ToWgs(Vec2f { (double) low.x, (double) high.y + 1 }, zoom_level);
-        wgs_high = e3857ToWgs(Vec2f { (double) high.x + 1, (double) low.x }, zoom_level);
+        wgs_low = e3857ToWgs(Vec2f { (double) low.x, (double) high.y }, zoom_level);
+        wgs_high = e3857ToWgs(Vec2f { (double) high.x + 1, (double) low.y + 1 }, zoom_level);
         
         rows = high.y - low.y + 1;
         cols = high.x - low.x + 1;
@@ -300,7 +300,7 @@ public:
         double lon_s = lon - lon_start;
         double lon_e = lon_s + 1;
         
-        if (lon_e > wgs_high.y) {
+        if (lon_e > wgs_high.y - lon_start) {
             cout << "ERROR!" << "\n";
             exit(1);
         }

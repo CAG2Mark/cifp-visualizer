@@ -46,6 +46,8 @@ def get_vfp_file(tile: Tile):
   # special cases, by inspecting the files themselves
   if -90 <= lat <= -66 and 90 <= lon <= 179:
     return "ANTDEM3/46-60"
+  if 61 <= lat <= 62 and -8 <= lon <= -7:
+    return "dem3/FAR"
   if 59 <= lat <= 63 and -52 <= lon <= -41:
     return "dem3/GL-South"
   if 75 <= lat <= 83 and -78 <= lon <= -12:
