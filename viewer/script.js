@@ -9,15 +9,18 @@ var TO_RAD = Math.PI / 180;
 var controls;
 var camera, scene, renderer;
 var mesh;
-var lat = 27, lon = 89;
+var lat = 47, lon = 11;
 var latR = TO_RAD * lat;
 var lonR = TO_RAD * lon;
+var UPDOWN_BOUND = 87 * TO_RAD;
 
 let UP = new THREE.Vector3(
     Math.cos(latR) * Math.cos(lonR),
     Math.sin(latR),
     -Math.cos(latR) * Math.sin(lonR)
 );
+
+let NEGUP = new THREE.Vector3(UP.x, UP.y, UP.z).negate();
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -84,6 +87,21 @@ async function load_tile(lat, lon, zl) {
     camera.position.x = pos.x;
     camera.position.y = pos.y;
     camera.position.z = pos.z;
+    
+    camera.up = UP;
+    
+    cameraHdg = 0; // north
+    cameraUpDown = 0;
+    
+    // look straight north
+    // right hand rule
+    let north = new THREE.Vector3(
+        Math.cos(latR) * Math.sin(lonR),
+        0,
+        Math.cos(latR) * Math.cos(lonR),
+    ).cross(UP).add(camera.position);
+    
+    camera.lookAt(north);
 }
 
 let moveForward = false;
@@ -93,13 +111,25 @@ let moveRight = false;
 let moveUp = false;
 let moveDown = false;
 let fast = false;
+let isMouseDown = false;
+let mouseX = 0;
+let mouseY = 0;
+let mouseXOld = 0;
+let mouseYOld = 0;
+let mouseFirst = false;
+
+let cameraHdg = 0; // initially north
+let cameraUpDown = 0; // initially level with the ground
+
+let last_update;
 
 init();
+last_update = window.performance.now();
 animate();
 
-let a = load_tile(lat, lon, 13);
-let b = load_tile(lat, lon + 1, 13);
-let c = load_tile(lat, lon + 2, 13);
+let a = load_tile(lat, lon, 14);
+// let b = load_tile(lat, lon + 1, 13);
+// let c = load_tile(lat, lon + 2, 13);
 Promise.all([a, b, c]);
 
 function init() {
@@ -135,15 +165,26 @@ function init() {
     renderArea.appendChild(renderer.domElement);
 
     // let's have the mouse affect the view
-    controls = new PointerLockControls(camera, renderer.domElement);
+    // controls = new PointerLockControls(camera, renderer.domElement);
 
     //
 
     window.addEventListener('resize', onWindowResize, false);
 
-    window.addEventListener('click', () => controls.lock());
+    // window.addEventListener('click', () => controls.lock());
+    renderArea.addEventListener('mousedown', (e) => { 
+        mouseFirst = true; isMouseDown = true;
+    });
+    
+    renderArea.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    })
+    
+    renderArea.addEventListener('mouseup', () => isMouseDown = false);
+    renderArea.addEventListener('mouseleave', () => isMouseDown = false);
+    renderArea.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; })
 
-    scene.add(controls.object);
+    // scene.add(controls.object);
 
     const onKeyDown = function (event) {
         switch (event.code) {
@@ -164,10 +205,10 @@ function init() {
                 moveRight = true;
                 break;
             case 'KeyQ':
-                moveUp = true;
+                moveDown = true;
                 break;
             case 'KeyE':
-                moveDown = true;
+                moveUp = true;
                 break;
             case 'ShiftLeft':
                 fast = true;
@@ -194,10 +235,10 @@ function init() {
                 moveRight = false;
                 break;
             case 'KeyQ':
-                moveUp = false;
+                moveDown = false;
                 break;
             case 'KeyE':
-                moveDown = false;
+                moveUp = false;
                 break;
             case 'ShiftLeft':
                 fast = false;
@@ -223,13 +264,16 @@ function onWindowResize() {
 function animate() {
 
     requestAnimationFrame(animate);
-
     // auto-rotation at start - turn it off
     //mesh.rotation.x += 0.005;
     //mesh.rotation.y += 0.01;
-    let vel = 0.05;
+    let vel = 0.025;
     
-    if (fast) vel *= 4;
+    let tmp = window.performance.now();
+    let timeFactor = 0.1 * (tmp - last_update);
+    last_update = tmp;
+    
+    if (fast) vel = 0.15;
     
     let velA = 0, velB = 0, velC = 0;
     
@@ -251,11 +295,27 @@ function animate() {
         velC += -vel;
     }
     
+    if (isMouseDown) {
+        if (mouseFirst) {
+            mouseFirst = false;
+        } else {
+            let xDel = mouseX - mouseXOld;
+            let yDel = mouseY - mouseYOld;
+            
+            cameraHdg -= xDel / 15 * TO_RAD * timeFactor;
+            cameraUpDown -= yDel / 15 * TO_RAD * timeFactor;
+            
+            cameraUpDown = Math.max(Math.min(cameraUpDown, UPDOWN_BOUND), -UPDOWN_BOUND);
+        }
+        mouseXOld = mouseX;
+        mouseYOld = mouseY;
+    }
+    
     let a = new THREE.Vector3();
     camera.getWorldDirection(a);
     let c = new THREE.Vector3(UP.x, UP.y, UP.z)
     let b = new THREE.Vector3();
-    b.crossVectors(a, c).normalize(); // right hand rule (faces right)
+    b.crossVectors(a, c).normalize();
     
     a.crossVectors(c, b);
     
@@ -264,7 +324,36 @@ function animate() {
     c.multiplyScalar(velC);
     a.add(b);
     a.add(c);
+    
+    a.multiplyScalar(timeFactor);
+    
     camera.position.add(a);
+    // console.log(camera.up);
+    
+    if (isMouseDown) {
+        // vector looking straight forward, combined with heading
+        let forward = new THREE.Vector3(
+            Math.cos(latR) * Math.sin(lonR + cameraHdg),
+            0,
+            Math.cos(latR) * Math.cos(lonR + cameraHdg),
+        ).cross(UP);
+        
+        // combine with up/down angle
+        let upCopy = new THREE.Vector3(
+            UP.x, UP.y, UP.z
+        ).multiplyScalar(Math.sin(cameraUpDown));
+        
+        console.log(cameraUpDown);
+        // combine with up/down angle
+        forward
+            .multiplyScalar(Math.cos(cameraUpDown))
+            .add(upCopy)
+            
+        forward.add(camera.position);
+
+        camera.lookAt(forward);
+    }
+    
 
     // controls.moveForward(velA);
     // controls.moveRight(velB);
@@ -274,5 +363,4 @@ function animate() {
     // controls.update();
 
     // console.log(camera.position)
-
 }

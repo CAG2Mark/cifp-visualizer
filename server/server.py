@@ -7,7 +7,7 @@ import tiler
 from threading import Lock
 from jobs import *
 
-hostName = "localhost"
+hostName = "0.0.0.0"
 serverPort = 8080
 
 logger = logging.getLogger("cifp-viewer")
