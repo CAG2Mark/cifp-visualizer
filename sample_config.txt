@@ -1,0 +1,4 @@
+# Copy this file to config.txt
+
+# Navigation data directory
+data_dir=FILL HERE

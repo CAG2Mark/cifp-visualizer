@@ -6,6 +6,7 @@ from secrets import randbelow
 import tiler
 from threading import Lock
 from jobs import *
+import re
 
 hostName = "0.0.0.0"
 serverPort = 8080
@@ -241,6 +242,19 @@ if __name__ == "__main__":
   logging.basicConfig(format='[%(asctime)s] %(name)s (%(levelname)s): %(message)s')
   logger.setLevel(logging.INFO)
 
+  # load config
+  try:
+    with open("config.txt") as f:
+      data = f.read()
+      data = re.sub(r"#[^\n]*\n", "\n", data)
+      cfg = {}
+      for ln in data.split("\n"):
+        if not ln: continue
+        key, val = ln.split("=")
+        cfg[key.strip()] = val.strip()
+  except OSError:
+    print("Could not open config file.")
+    os.exit(1)
 
   webServer = HTTPServer((hostName, serverPort), CIFPServer)
   logger.info("Server started http://%s:%s" % (hostName, serverPort))
