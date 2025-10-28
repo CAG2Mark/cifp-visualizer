@@ -1,10 +1,10 @@
 import os
 from secrets import randbelow
 from threading import Thread
-import tiler
+import server.tiler as tiler
 import subprocess
 from os import pipe
-from downloaders import *
+from server.downloaders import *
 import zipfile
 
 def make_uuid():

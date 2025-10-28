@@ -1,12 +1,12 @@
-# Python 3 server example
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 import os
 from secrets import randbelow
-import tiler
+import server.tiler
 from threading import Lock
-from jobs import *
+from server.jobs import *
 import re
+from server.navdata.loader import NavDatabase
 
 hostName = "0.0.0.0"
 serverPort = 8080
@@ -238,7 +238,9 @@ class CIFPServer(BaseHTTPRequestHandler):
        self.send_response(404)
        self.end_headers()
 
-if __name__ == "__main__":        
+if __name__ == "__main__":
+  global navdata
+  
   logging.basicConfig(format='[%(asctime)s] %(name)s (%(levelname)s): %(message)s')
   logger.setLevel(logging.INFO)
 
@@ -247,14 +249,20 @@ if __name__ == "__main__":
     with open("config.txt") as f:
       data = f.read()
       data = re.sub(r"#[^\n]*\n", "\n", data)
-      cfg = {}
+      cfg: dict[str, str] = {}
       for ln in data.split("\n"):
         if not ln: continue
         key, val = ln.split("=")
         cfg[key.strip()] = val.strip()
   except OSError:
     print("Could not open config file.")
-    os.exit(1)
+    exit(1)
+  
+  navdata_dir = cfg["data_dir"]
+  if navdata_dir.endswith("/"): navdata_dir = navdata_dir[:-1]
+  logger.info("Loading navdata from " + navdata_dir + ".")
+  data = NavDatabase(navdata_dir)
+  logger.info("Navdata loaded.")
 
   webServer = HTTPServer((hostName, serverPort), CIFPServer)
   logger.info("Server started http://%s:%s" % (hostName, serverPort))

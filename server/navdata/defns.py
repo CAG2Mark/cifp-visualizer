@@ -285,6 +285,7 @@ class HoldFix(Leg):
 @dataclass
 class HoldToManual(Leg):
   def type_str(self): return "HM"
+
   fix: Waypoint
   disttime: DistOrTime
   course: Course

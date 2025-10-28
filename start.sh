@@ -1,5 +1,5 @@
-
-cmd="python3 server/server.py"
+#!/bin/bash
+cmd="python3 -m server"
 
 trap ctrl_c INT
 

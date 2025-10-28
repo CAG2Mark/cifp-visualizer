@@ -1,7 +1,6 @@
-from defns import Waypoint, AirportInfo, AltRestr, SpeedRestr, Leg, Course, DistOrTime # for type annotations
-from defns import *
+from server.navdata.defns import *
 from collections import defaultdict
-from util import querydict
+from server.util import querydict
 import os
 
 def parse_alt(data: str) -> int:
@@ -160,6 +159,8 @@ class NavDatabase:
     if start_idx == 4:
       if desc[0] == "A" or desc[0] == "H":
         # airport or heliport waypoint
+        if not fix in self.airports:
+          raise KeyError(f"Airport `{fix}` not found." )
         airport = self.airports[fix]
         return Waypoint(airport.icao, airport.lat, airport.lon, airport.region)
       if desc[0] == "G":
@@ -371,7 +372,6 @@ class NavDatabase:
       disttime = self.process_disttime(data)
       return HoldToManual(info, fix, disttime, course)
     
-    print(data)
     raise ValueError("Leg type " + kind + " not recognized.")
     
   def get_airport_data(self, airport: str):
@@ -473,6 +473,7 @@ class NavDatabase:
         if qual in ["0", "1", "2", "4", "F", "M", "T", "V"]:
           if trans_id:
             proc.rwys = self.parse_rwy(trans_id, airport)
+          proc.legs = legs
         elif qual in ["3", "6", "S", "V"]:
           proc.transitions.append((trans_id, legs))
         else:
@@ -482,6 +483,7 @@ class NavDatabase:
         if qual in ["2", "5", "3", "6", "8", "9", "M", "S"]:
           if trans_id:
             proc.rwys = self.parse_rwy(trans_id, airport)
+          proc.legs = legs
         elif qual in ["1", "4", "7", "F"]:
           proc.transitions.append((trans_id, legs))
         else:

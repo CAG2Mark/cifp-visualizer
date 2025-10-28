@@ -1,6 +1,6 @@
 import math
 import logging
-from downloaders import *
+from server.downloaders import *
 
 logger = logging.getLogger("cifp-viewer")
 

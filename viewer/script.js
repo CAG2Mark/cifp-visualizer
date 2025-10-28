@@ -153,27 +153,28 @@ function init() {
     //
 
     window.addEventListener('resize', onWindowResize, false);
-    renderArea.addEventListener('mousedown', (e) => { 
+    renderer.domElement.addEventListener('mousedown', (e) => { 
         mouseFirst = true; isMouseDown = true;
+        e.preventDefault();
     });
     
-    renderArea.addEventListener('contextmenu', (e) => {
+    renderer.domElement.addEventListener('contextmenu', (e) => {
         e.preventDefault();
     })
     
-    renderArea.addEventListener('mouseup', () => isMouseDown = false);
-    renderArea.addEventListener('mouseleave', () => isMouseDown = false);
-    renderArea.addEventListener('mousemove', (e) => { if (!touching) { mouseX = e.clientX; mouseY = e.clientY; } })
+    renderer.domElement.addEventListener('mouseup', () => isMouseDown = false);
+    renderer.domElement.addEventListener('mouseleave', () => isMouseDown = false);
+    renderer.domElement.addEventListener('mousemove', (e) => { if (!touching) { mouseX = e.clientX; mouseY = e.clientY; } })
     
-    renderArea.addEventListener('touchstart', (e) => {
+    renderer.domElement.addEventListener('touchstart', (e) => {
         mouseFirst = true; isMouseDown = true; touching = true;
         mouseX = -e.touches[0].clientX;
         mouseY = -e.touches[0].clientY;
     });
     
-    renderArea.addEventListener('touchmove', (e) => { mouseX = -e.touches[0].clientX; mouseY = -e.touches[0].clientY;})
-    renderArea.addEventListener('touchend', () => { isMouseDown = false; touching = false; });
-    renderArea.addEventListener('touchcancel', () => { isMouseDown = false; touching = false; });
+    renderer.domElement.addEventListener('touchmove', (e) => { mouseX = -e.touches[0].clientX; mouseY = -e.touches[0].clientY;})
+    renderer.domElement.addEventListener('touchend', () => { isMouseDown = false; touching = false; });
+    renderer.domElement.addEventListener('touchcancel', () => { isMouseDown = false; touching = false; });
 
     const onKeyDown = function (event) {
         switch (event.code) {
