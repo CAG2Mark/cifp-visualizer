@@ -1,4 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
+
+class ProcKind(Enum):
+  SID = 0
+  STAR = 1
+  APPCH = 2
 
 @dataclass
 class Course:
@@ -55,7 +61,20 @@ class GlideslopeAlt(AltRestr):
 class GlideslopeIntc(AltRestr):
   intc: int
   alt: int
-  above: bool
+  above: bool # true = above, false = at
+
+# V, Y
+@dataclass
+class StepDownAboveBelow(AltRestr):
+  alt: int
+  valt: int
+  above: bool # true = above, false = below
+
+# X
+@dataclass
+class StepDownAt(AltRestr):
+  alt: int
+  valt: int
 
 @dataclass
 class RadialDME:
@@ -71,6 +90,10 @@ class Radial:
 @dataclass
 class LegInfo:
   seq: int
+  kind: ProcKind
+  qual: str
+  proc: str
+  trans: str
   
   # false = left
   # important: this specifies the direction you turn into the next leg,
@@ -219,6 +242,7 @@ class HeadingToIntercept(Leg):
 class HeadingToManual(Leg):
   def type_str(self): return "VM"
   
+  # Note (ARINC 424): "If a STAR route ends with a vector heading, the airport ident is entered in the waypoint ident field."
   fix: Waypoint | None
   heading: Course
 
@@ -274,3 +298,28 @@ class AirportInfo:
   elevation: int
   ta: int
   tl: int
+  runways: list[str] = field(default_factory=list)
+
+@dataclass
+class SID:
+  ident: str
+  airport: str
+  rwys: list[str] = field(default_factory=list)
+  legs: list[Leg] = field(default_factory=list)
+  transitions: list[tuple[str, list[Leg]]] = field(default_factory=list)
+
+@dataclass
+class STAR:
+  ident: str
+  airport: str
+  rwys: list[str] = field(default_factory=list)
+  transitions: list[tuple[str, list[Leg]]] = field(default_factory=list)
+  legs: list[Leg] = field(default_factory=list)
+
+@dataclass
+class Approach:
+  ident: str
+  airport: str
+  rwy: str | None = None
+  transitions: list[tuple[str, list[Leg]]] = field(default_factory=list)
+  legs: list[Leg] = field(default_factory=list)

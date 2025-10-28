@@ -1,5 +1,7 @@
 from defns import Waypoint, AirportInfo, AltRestr, SpeedRestr, Leg, Course, DistOrTime # for type annotations
 from defns import *
+from collections import defaultdict
+from util import querydict
 import os
 
 def parse_alt(data: str) -> int:
@@ -13,10 +15,11 @@ def parse_course(crs: str) -> Course:
     crs = crs[:-1] 
   return Course(int(crs) / 10, truenorth)
   
+  
 class NavDatabase:
   
-  waypoints: dict[str, dict[str, Waypoint]] = {}
-  runway_waypoints: dict[str, dict[str, Waypoint]] = {}
+  waypoints: dict[str, dict[str, Waypoint]] = defaultdict(lambda: {})
+  runway_waypoints: dict[str, dict[str, Waypoint]] = defaultdict(lambda: {})
   airports: dict[str, AirportInfo] = {}
   
   def __init__(self, dir: str):
@@ -55,11 +58,7 @@ class NavDatabase:
       if not d[0] in ["2", "3", "4", "5", "12", "13"]: continue
       
       if d[0] == "4":
-        if not airport in self.runway_waypoints: self.runway_waypoints[airport] = {}
         self.runway_waypoints[airport][name] = Waypoint(name, lat, lon, region)
-      
-      if not region in self.waypoints:
-        self.waypoints[region] = {}
       
       self.waypoints[region][name] = Waypoint(name, lat, lon, region)
       
@@ -100,23 +99,39 @@ class NavDatabase:
     if not kind:
       return AtAlt(alt1)
     if kind == "+" or kind == "=+":
+      assert alt1 != -1
       return AltRange(alt1, None)
     if kind == "-":
+      assert alt1 != -1
       return AltRange(None, alt1)
     if kind == "B":
+      assert alt1 != -1, alt2 != -1
       return AltRange(alt1, alt2)
     if kind == "C":
+      assert alt2 != -1
       return AltRange(None, alt2)
     if kind == "G":
+      assert alt1 != -1, alt2 != -1
       return GlideslopeAlt(alt2, alt1, False)
     if kind == "H":
+      assert alt1 != -1, alt2 != -1
       return GlideslopeAlt(alt2, alt1, True)
     if kind == "I":
+      assert alt1 != -1, alt2 != -1
       return GlideslopeIntc(alt2, alt1, False)
     if kind == "J":
+      assert alt1 != -1, alt2 != -1
       return GlideslopeIntc(alt2, alt1, True)
-    # It seems V, X, Y are never used
-
+    if kind == "V":
+      assert alt1 != -1, alt2 != -1
+      return StepDownAboveBelow(alt1, alt2, True)
+    if kind == "X":
+      assert alt1 != -1, alt2 != -1
+      return StepDownAt(alt1, alt2)
+    if kind == "Y":
+      assert alt1 != -1, alt2 != -1
+      return StepDownAboveBelow(alt1, alt2, False)
+    
     raise ValueError("Altitude description " + kind + " not recognized.")
     
   def process_speed_desc(self, data: list[str]) -> SpeedRestr | None:
@@ -201,13 +216,17 @@ class NavDatabase:
     theta = parse_course(data[18])
     return Radial(waypoint, theta)
   
-  def process_line(self, data: list[str], airport: str) -> Leg:
+  def process_line(self, proc_kind: ProcKind, data: list[str], airport: str) -> Leg:
+    desc = data[8]
     data = [x.strip() for x in data]
+    data[8] = desc # padding is important for this field
     
     seq = int(data[0])
+    qual = data[1]
     ident = data[2]
+    trans = data[3]
     
-    desc = data[8].ljust(4, " ")
+    desc = data[8]
     overfly = desc[1] == "Y"
     fmap = desc[2] == "M"
     iaf = desc[3] == "C" or desc[3] == "A" or desc[3] == "D"
@@ -222,7 +241,7 @@ class NavDatabase:
     
     angle = int(data[28]) / 100 if data[28] else None
     
-    info = LegInfo(seq, turn_dir, overfly, fmap, mapt, iaf, faf, alt, speed, angle)
+    info = LegInfo(seq, proc_kind, qual, ident, trans, turn_dir, overfly, fmap, mapt, iaf, faf, alt, speed, angle)
     kind = data[11]
     
     if kind == "IF":
@@ -321,6 +340,11 @@ class NavDatabase:
       radial = self.process_rad(data, airport, 13)
       return HeadingToRadial(info, heading, radial)
     
+    if kind == "VM":
+      fix = self.process_waypoint(data, airport) if data[4] else None
+      heading = self.process_course(data)
+      return HeadingToManual(info, fix, heading)
+    
     if kind == "PI":
       fix = self.process_waypoint(data, airport)
       alt = parse_alt(data[23])
@@ -347,16 +371,17 @@ class NavDatabase:
       disttime = self.process_disttime(data)
       return HoldToManual(info, fix, disttime, course)
     
+    print(data)
+    raise ValueError("Leg type " + kind + " not recognized.")
+    
   def get_airport_data(self, airport: str):
     path = self.dir + "/CIFP/" + airport + ".dat"
     with open(path) as f:
       data = f.read().split(";\n")
       
-    if not airport in self.airports: return
+    if not airport in self.airports: return None
     
     # scan runway waypoints
-    if not airport in self.runway_waypoints:
-      self.runway_waypoints[airport] = {}
     for ln in data:
       ln = ln.strip()
       if not ln: continue
@@ -369,6 +394,8 @@ class NavDatabase:
       parts = parts.split(",")
       
       rwy = parts[0].strip()
+      
+      self.airports[airport].runways.append(rwy)
       
       if len(spl) == 1: # missing lat lon
         # try to recover by finding the associated ils waypoint
@@ -392,6 +419,9 @@ class NavDatabase:
       region = self.airports[airport].region if airport in self.airports else ""
       self.runway_waypoints[airport][rwy] = Waypoint(rwy, lat, lon, region)
   
+    # type, qual, proc ident, trans ident
+    procedures: dict[tuple[ProcKind, str, str, str], list[Leg]] = defaultdict(lambda: [])
+    
     try:
       for ln in data:
         ln = ln.strip()
@@ -403,15 +433,69 @@ class NavDatabase:
           continue
         else:
           ln = ln.split(",")
-          self.process_line(ln, airport)
+          kind_enum: ProcKind
+          if kind == "SID": kind_enum = ProcKind.SID
+          elif kind == "STAR": kind_enum = ProcKind.STAR
+          else: kind_enum = ProcKind.APPCH
+          
+          leg = self.process_line(kind_enum, ln, airport)
+          procedures[(leg.info.kind, leg.info.qual, leg.info.proc, leg.info.trans)].append(leg)
+          
     except KeyError as e:
       print(f"Error loading data for airport `{airport}`:")
       print(e.args[0])
-      
+    
+    return self.sort_data(procedures, airport)
+  
+  def parse_rwy(self, rwy: str, airport: str) -> list[str]:
+    if rwy == "ALL": return self.airports[airport].runways
+    if rwy[0:2] != "RW": return []
+    rwy = rwy[2:]
+    if rwy[-1] == "B":
+      return list(filter(lambda x: x.startswith("RW" + rwy[:-1]), self.airports[airport].runways))
+    return [rwy]
+  
+  def extract_rwy(self, proc: str) -> str | None:
+    if not proc[1:3].isnumeric(): return None
+    if len(proc) <= 3 or proc[3] == "-": return proc[1:3]
+    else: return proc[1:3].replace("0", "") + proc[3]
+  
+  def sort_data(self, procedures: dict[tuple[ProcKind, str, str, str], list[Leg]], airport: str):
+    sids: dict[str, SID] = querydict.QueryDict(lambda x: SID(x, airport))
+    stars: dict[str, STAR] = querydict.QueryDict(lambda x: STAR(x, airport))
+    appches: dict[str, Approach] = querydict.QueryDict(lambda x: Approach(x, airport))
+    
+    for (kind, qual, proc_id, trans_id), legs in procedures.items():
+      legs.sort(key=lambda k: k.info.seq)
+            
+      if kind == ProcKind.SID:
+        proc = sids[proc_id]
+        if qual in ["0", "1", "2", "4", "F", "M", "T", "V"]:
+          if trans_id:
+            proc.rwys = self.parse_rwy(trans_id, airport)
+        elif qual in ["3", "6", "S", "V"]:
+          proc.transitions.append((trans_id, legs))
+        else:
+          proc.legs = legs
+      elif kind == ProcKind.STAR:
+        proc = stars[proc_id]
+        if qual in ["2", "5", "3", "6", "8", "9", "M", "S"]:
+          if trans_id:
+            proc.rwys = self.parse_rwy(trans_id, airport)
+        elif qual in ["1", "4", "7", "F"]:
+          proc.transitions.append((trans_id, legs))
+        else:
+          proc.legs = legs
+      else: # kind = approach
+        proc = appches[proc_id]
+        proc.rwy = self.extract_rwy(proc_id)
+        if qual == "A": proc.transitions.append((trans_id, legs))
+        else: proc.legs = legs
+    return (sids, stars, appches)
 
 if __name__ == "__main__":
   # testing
-  data = NavDatabase("/home/mark/gamedrive/xplane-12/Custom Data")
-  for a in os.listdir("/home/mark/gamedrive/xplane-12/Custom Data/CIFP"):
+  dir = "/home/mark/gamedrive/xplane-12/Custom Data/"
+  data = NavDatabase(dir)
+  for a in os.listdir(dir + "/CIFP"):
     data.get_airport_data(a[:-4])
-  # data.get_airport_data("EGLC")
