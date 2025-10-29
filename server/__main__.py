@@ -50,3 +50,32 @@ else:
   if res:
     sids, stars, appches = res
     builder.build_2d(appches["I07C"].legs)
+
+    center = data.get_waypoint("MAC04", "LP")
+    start = data.get_waypoint("MA522", "LP")
+    end = data.get_waypoint("MA520", "LP")
+    
+    print(center)
+    print(start)
+    print(end)
+    
+    res = builder.turn_from(
+      builder.PathPoint(0, 0, 0, pi/2),
+      pi / 2,
+      45 * pi / 180,
+      100,
+      6, True
+    )
+    
+    for p in res:
+      p.print_deg()
+    
+    exit()
+    res = builder.get_arc_points(
+      (center.lat * pi / 180, center.lon * pi / 180),
+      (start.lat * pi / 180, start.lon * pi / 180),
+      (end.lat * pi / 180, end.lon * pi / 180), 2, True
+    )
+    print(res[0][1])
+    print(res[1])
+    
