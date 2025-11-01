@@ -105,7 +105,7 @@ class NavDatabase:
       return AltRange(None, alt1)
     if kind == "B":
       assert alt1 != -1, alt2 != -1
-      return AltRange(alt1, alt2)
+      return AltRange(min(alt1, alt2), max(alt1, alt2))
     if kind == "C":
       assert alt2 != -1
       return AltRange(None, alt2)

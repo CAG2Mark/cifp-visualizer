@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
+from math import pi
 
 class ProcKind(Enum):
   SID = 0
@@ -19,9 +20,12 @@ class DistOrTime:
 @dataclass
 class Waypoint:
   name: str
-  lat: float
-  lon: float
+  lat: float # decimal degrees
+  lon: float # decimal degrees
   region: str
+  
+  def to_rad(self):
+    return (self.lat * pi / 180, self.lon * pi / 180)
   
 class AltRestr: pass
 
@@ -54,7 +58,7 @@ class AltRange(AltRestr):
 class GlideslopeAlt(AltRestr):
   msl: int
   alt: int
-  above: bool
+  above: bool # true = above, false = at
 
 # I, J
 @dataclass
@@ -68,7 +72,7 @@ class GlideslopeIntc(AltRestr):
 class StepDownAboveBelow(AltRestr):
   alt: int
   valt: int
-  above: bool # true = above, false = below
+  above_below: bool # true = above, false = below
 
 # X
 @dataclass
