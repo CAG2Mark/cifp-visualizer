@@ -64,13 +64,15 @@ else:
     baxas_wpt = data.get_waypoint("BAXAS", "EN")
     baxas = (baxas_wpt.lat * pi / 180, baxas_wpt.lon * pi / 180)
     
-    res = builder.turn_to_course_towards(tro10, 348.2 * pi / 180, baxas, 194.2 * pi / 180, 1, 5, True)
-    for r in res:
-      print(r.lat * 180 / pi, r.lon * 180 / pi)
+    #res = builder.turn_to_course_towards(tro10, 348.2 * pi / 180, baxas, 194.2 * pi / 180, 1, 5, True)
+    #for r in res:
+    #  print(r.lat * 180 / pi, r.lon * 180 / pi)
     
-    builder.build_points(legs, -1, 4000, False)
+    points = builder.build_points(legs, -1, 4000, False)
+    for p in points:
+      p.print_deg()
     
-    builder.build_points(map_legs, -1, 73, True)
+    # builder.build_points(map_legs, -1, 73, True)
     
     exit()
     

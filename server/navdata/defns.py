@@ -11,6 +11,7 @@ class ProcKind(Enum):
 class Course:
   val: float
   truenorth: bool
+  def as_rad(self): return self.val * pi / 180
   
 @dataclass
 class DistOrTime:
@@ -158,6 +159,7 @@ class FixToDistance(Leg):
   def type_str(self): return "FC"
   
   start: Waypoint
+  course: Course
   dist: float
 
 @dataclass
@@ -165,7 +167,8 @@ class FixToDME(Leg):
   def type_str(self): return "FD"
   
   start: Waypoint
-  to: Waypoint
+  course: Course
+  ref: Waypoint
   dist: float
 
 @dataclass

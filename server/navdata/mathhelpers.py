@@ -1,10 +1,20 @@
 from server.navdata.defns import *
 from pygeomag import GeoMag
+import datetime
 from math import cos, sin, asin, acos, atan2, sqrt, pi, ceil
 from typing import Self
 
 # For calculating magnetic declination
 geo_mag = GeoMag(coefficients_file="wmm/WMMHR.COF", high_resolution=True)
+year = datetime.date.today().year
+def to_mag(latlon: tuple[float, float], course: Course, alt: float = 0):
+  decl = geo_mag.calculate(
+    glat = latlon[0] * 180 / pi,
+    glon = latlon[1] * 180 / pi,
+    alt = alt,
+    time = year
+  ).d * pi / 180
+  return course.as_rad() + decl
 
 @dataclass
 class PathPoint:
@@ -103,6 +113,7 @@ def point_bisect_line(point: tuple[float, float], start: tuple[float, float], co
 def circle_distance(a: tuple[float, float], b: tuple[float, float]):
   return abs(acos(to_xyz(*a).dot(to_xyz(*b))))
 
+# return the first point reached when flying from a at the specified course
 def get_intersection(a: tuple[float, float], a_crs: float, b: tuple[float, float], b_crs: float) -> tuple[float, float]:
   a_xyz = to_xyz(*a)
   b_xyz = to_xyz(*b)
@@ -112,7 +123,21 @@ def get_intersection(a: tuple[float, float], a_crs: float, b: tuple[float, float
   a_norm = a_xyz.cross(a_tan)
   b_norm = b_xyz.cross(b_tan)
   
-  return to_latlon(a_norm.cross(b_norm))
+  res = a_norm.cross(b_norm)
+  if res.mag2() < TOLERANCE:
+    return a
+  
+  # point = cos(dist) * a_xyz + sin(dist) * a_tan
+  a_dist1 = atan2(res.dot(a_tan), res.dot(a_xyz)) % (2 * pi)
+  a_dist2 = atan2(-res.dot(a_tan), res.dot(a_xyz)) % (2 * pi)
+  
+  print(to_latlon(res))
+  print(to_latlon(-res))
+  print("dists:", a_dist1, a_dist2)
+  
+  ans = res if a_dist1 < a_dist2 else -res
+  
+  return to_latlon(ans)
 
 # returns orthonormal basis
 # (center of circle in xyz, v1, v2, v3), v1 v2 v3 orthonormal
@@ -213,9 +238,10 @@ def get_course_between(a: tuple[float, float], b: tuple[float, float]) -> float:
   # just calculate the tangent line from a to b
   a_xyz = to_xyz(*a)
   b_xyz = to_xyz(*b)
-  diff = b_xyz - a_xyz
+  diff = (b_xyz - a_xyz) * EARTH_RAD # the differences can be so small that it results in a division by zero
   # make diff orthogonal to a_xyz
   diff = diff - a_xyz * (a_xyz.dot(diff))
+  if diff.mag2() <= TOLERANCE: return -1
   return get_course(a, diff.normalize())
 
 # turn by `angle` radians
@@ -322,6 +348,11 @@ def turn_towards(
   for i in range(ITERATIONS):
     turn = i * step
     ang = calc_angle(turn)
+    if ang == -1:
+      best = 0
+      best_ang = turn
+      break
+    
     if ang < best:
       best = ang
       best_ang = turn
@@ -530,11 +561,11 @@ def to_xyz_earth(lat: float, lon: float) -> Vec3:
 def to_latlon(v: Vec3) -> tuple[float, float]:
   return (
     asin(v.z),
-    atan2(v.y, v.x) % pi
+    atan2(v.y, v.x)
   )
 
 def to_latlon_earth(v: Vec3) -> tuple[float, float]:
   return (
     asin(v.z / EARTH_RAD),
-    atan2(v.y, v.x) % pi
+    atan2(v.y, v.x)
   )

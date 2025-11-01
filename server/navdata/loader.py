@@ -413,8 +413,8 @@ class NavDatabase:
       lats = 1 if lat[0] == "N" else -1
       lons = 1 if lon[0] == "E" else -1
       
-      lat = lats * int(lat[1:]) / 1000000
-      lon = lons * int(lon[1:]) / 1000000
+      lat = lats * (int(lat[1:3]) + int(lat[3:5]) / 60 + int(lat[5:]) / 360000)
+      lon = lons * (int(lon[1:4]) + int(lon[4:6]) / 60 + int(lon[6:]) / 360000)
       
       region = self.airports[airport].region if airport in self.airports else ""
       self.runway_waypoints[airport][rwy] = Waypoint(rwy, lat, lon, region)

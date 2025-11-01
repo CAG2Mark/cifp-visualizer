@@ -61,7 +61,7 @@ def build_points(legs: list[Leg], start_course: float | None, start_alt: float, 
   points: list[PathPoint] = []
   
   cstrs = build_alt_constr(legs, ascending)
-  print(list(zip([p.fix.name for p in legs], cstrs)))
+  # print(list(zip([p.fix.name for p in legs], cstrs)))
   
   if start_course is None:
     cur_course = -1
@@ -78,29 +78,69 @@ def build_points(legs: list[Leg], start_course: float | None, start_alt: float, 
       return right_diff < pi
     else:
       return leg.info.turndir
+  
+  def course_to(fix: Waypoint):
+    return get_course_between(points[-1].latlon(), fix.to_rad())
+  
+  def auto_course():
+    nonlocal cur_course
+    if len(points) >= 2:
+      crs = get_course_between(points[-2].latlon(), points[-1].latlon())
+      if crs != -1: cur_course = crs
+    
+  def cur_latlon():
+    return points[-1].latlon()
+  
 
   # points per revolution per radius
   # i.e. a full revolution with radius 1nm will have POINT_DENSITY points
   POINT_DENSITY = 256
+  MIN_RADIUS = 1
   for i, leg in enumerate(legs):
     match leg:
       case InitialFix(info, fix):
         points.append(PathPoint(*waypoint_rad(fix), cur_course, cur_alt))
+        auto_course()
       case TrackToFix(info, fix):
+        req_crs = course_to(fix)
+        td = turn_dir(leg, req_crs)
         if overfly:
-          turn_towards(points[-1], cur_course, fix.to_rad(), 1, POINT_DENSITY, False)
+          new_p = turn_to_course_towards(points[-1], cur_course, fix.to_rad(), req_crs, MIN_RADIUS, POINT_DENSITY, td)
+          points += new_p
+        points.append(PathPoint(
+          *fix.to_rad(), course_to(fix), -1
+        ))
+        overfly = info.overfly
+        auto_course()
+      case CourseToFix(info, fix, course, _):
+        crs = to_mag(cur_latlon(), course)
+        td = turn_dir(leg, crs)
+        new_p = turn_to_course_towards(points[-1], cur_course, fix.to_rad(), crs, MIN_RADIUS, POINT_DENSITY, td)
+        points += new_p
+        points.append(PathPoint(
+          *fix.to_rad(), course_to(fix), -1
+        ))
+        overfly = info.overfly
+        auto_course()
+      case DirectToFix(info, fix, _):
+        req_crs = course_to(fix)
+        td = turn_dir(leg, req_crs)
+        if overfly:
+          new_p = turn_towards(points[-1], cur_course, fix.to_rad(), MIN_RADIUS, POINT_DENSITY, td)
+          points += new_p
+        points.append(PathPoint(
+          *fix.to_rad(), course_to(fix), -1
+        ))
+        auto_course()
+      case FixToAltitude(info, start, course, alt, _):
+        raise NotImplementedError()
         pass
-      case CourseToFix(info, fix, course, rcmd):
-        pass
-      case DirectToFix(info, rcmd):
-        pass
-      case FixToAltitude(info, fix, rcmd):
-        pass
-      case FixToDistance(info, start, course, alt, rcmd):
-        pass
-      case FixToDistance(info, start, dist):
-        pass
-      case FixToDME(info, start, to, dist):
+      case FixToDistance(info, start, course, dist):
+        crs = to_mag(cur_latlon(), course)
+        if (to_xyz(*points[-1].latlon()) - to_xyz(*start.to_rad())).mag2() >= TOLERANCE:
+          
+          pass
+      case FixToDME(info, start, course, ref, dist):
         pass
       case FixToManual(info, start, course, rcmd):
         pass
@@ -135,4 +175,6 @@ def build_points(legs: list[Leg], start_course: float | None, start_alt: float, 
       case HoldToManual(info, fix, disttime, course):
         pass
 
-      case _: raise ValueError("Invalid leg")
+      case Leg(_): raise ValueError("Invalid leg")
+  
+  return points
