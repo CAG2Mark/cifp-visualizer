@@ -2,6 +2,19 @@ from dataclasses import dataclass, field
 from enum import Enum
 from math import pi
 
+@dataclass
+class PathPoint:
+  lat: float # radians
+  lon: float # radians
+  course: float # **inbound** course, true, and in radians
+  altitude: float = -1
+  
+  def latlon(self):
+    return (self.lat, self.lon)
+  
+  def print_deg(self):
+    print(f"PathPoint(lat={self.lat * 180 / pi}, lon={self.lon * 180 / pi}, course={self.course * 180 / pi}, altitude={self.altitude})")
+
 class ProcKind(Enum):
   SID = 0
   STAR = 1
@@ -24,6 +37,7 @@ class Waypoint:
   lat: float # decimal degrees
   lon: float # decimal degrees
   region: str
+  airport: str
   
   def to_rad(self):
     return (self.lat * pi / 180, self.lon * pi / 180)
@@ -191,7 +205,7 @@ class CourseToDME(Leg):
   def type_str(self): return "CD"
   
   course: Course
-  to: Waypoint
+  ref: Waypoint
   dist: float
 
 @dataclass
@@ -234,9 +248,9 @@ class HeadingToAlt(Leg):
 class HeadingToDME(Leg):
   def type_str(self): return "VD"
   
-  heading: Course
-  rcmd: Waypoint
-  radial: RadialDME
+  course: Course
+  ref: Waypoint
+  dist: float
 
 @dataclass
 class HeadingToIntercept(Leg):

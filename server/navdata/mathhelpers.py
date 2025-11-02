@@ -4,6 +4,8 @@ import datetime
 from math import cos, sin, asin, acos, atan2, sqrt, pi, ceil
 from typing import Self
 
+NM_TO_FT = 6076.12
+
 # For calculating magnetic declination
 geo_mag = GeoMag(coefficients_file="wmm/WMMHR.COF", high_resolution=True)
 year = datetime.date.today().year
@@ -88,6 +90,11 @@ class Vec3:
 
 # all input and output angles to math helper functions are in RADIANS
 
+def angle_between(course: float, target_course: float, turn_right: bool):
+  diff = course - target_course
+  if turn_right: return (-diff) % (2 * pi)
+  return diff % (2 * pi)
+
 def get_sphere_tangent(latlon: tuple[float, float], course: float):
   outward = to_xyz(*latlon)
   north = Vec3(0, 0, 1)
@@ -108,10 +115,13 @@ def point_bisect_line(point: tuple[float, float], start: tuple[float, float], co
   plane_normal = to_xyz(*start).cross(tangent)
   
   point_xyz = to_xyz(*point)
-  return (point_xyz - plane_normal * (point_xyz.dot(plane_normal))).normalize()
+  return to_latlon((point_xyz - plane_normal * (point_xyz.dot(plane_normal))).normalize())
 
 def circle_distance(a: tuple[float, float], b: tuple[float, float]):
   return abs(acos(to_xyz(*a).dot(to_xyz(*b))))
+
+def earth_distance(a: tuple[float, float], b: tuple[float, float]):
+  return EARTH_RAD * circle_distance(a, b)
 
 # return the first point reached when flying from a at the specified course
 def get_intersection(a: tuple[float, float], a_crs: float, b: tuple[float, float], b_crs: float) -> tuple[float, float]:
@@ -124,17 +134,16 @@ def get_intersection(a: tuple[float, float], a_crs: float, b: tuple[float, float
   b_norm = b_xyz.cross(b_tan)
   
   res = a_norm.cross(b_norm)
+  res *= EARTH_RAD # scale by a large number because this number could be very small
+  res = res.normalize()
+  
   if res.mag2() < TOLERANCE:
     return a
   
   # point = cos(dist) * a_xyz + sin(dist) * a_tan
   a_dist1 = atan2(res.dot(a_tan), res.dot(a_xyz)) % (2 * pi)
-  a_dist2 = atan2(-res.dot(a_tan), res.dot(a_xyz)) % (2 * pi)
-  
-  print(to_latlon(res))
-  print(to_latlon(-res))
-  print("dists:", a_dist1, a_dist2)
-  
+  a_dist2 = atan2(-res.dot(a_tan), -res.dot(a_xyz)) % (2 * pi)
+
   ans = res if a_dist1 < a_dist2 else -res
   
   return to_latlon(ans)
@@ -175,27 +184,28 @@ def get_turning_cirle(center: tuple[float, float], start: tuple[float, float], c
   
   return (l, v1, v2, v3)
 
-TOLERANCE = 0.00001
+TOLERANCE = 0.3 / EARTH_RAD
+RF_TOLERANCE = 0.3 / EARTH_RAD
 # turndir = True => turn RIGHT
 # does NOT return the start point, but returns the end point
 # returns: (points, true outbound course)
 # where points are on the arc from `start` to `end` centered at `center`
-def get_arc_points(
+def get_arc_between_points(
     center: tuple[float, float],
     start: PathPoint,
-    end: PathPoint,
+    end: tuple[float, float],
     points_density: int,
     turn_right: bool = False,
     turning_circle: tuple[Vec3, Vec3, Vec3, Vec3] | None = None) -> list[PathPoint]:
   center_ = to_xyz(*center)
-  s = to_xyz(start.lat, start.lon)
-  e = to_xyz(end.lat, end.lon)
+  s = to_xyz(*start.latlon())
+  e = to_xyz(*end)
 
-  if not abs(sqrt((center_ - s).mag2()) - sqrt((center_ - e).mag2())) < TOLERANCE:
+  if not abs(sqrt((center_ - s).mag2()) - sqrt((center_ - e).mag2())) < RF_TOLERANCE:
     raise ValueError("`start` and `end` do not lie on a circle centered at `latlon`.")
   
   if turning_circle is None:
-    l, v1, v2, v3 = get_turning_cirle(center, (start.lat, start.lon), turn_right)
+    l, v1, v2, v3 = get_turning_cirle(center, start.latlon(), turn_right)
   else:
     l, v1, v2, v3 = turning_circle
 
@@ -252,16 +262,16 @@ def get_arc_points_angle(
     points_density: int, # points per revolution per radius
     turn_right: bool = False,
     turning_circle: tuple[Vec3, Vec3, Vec3, Vec3] | None = None) -> list[PathPoint]:
-  s = to_xyz(start.lat, start.lon)
+  s = to_xyz(*start.latlon())
   
   if turning_circle is None:
-    l, _, v2, v3 = get_turning_cirle(center, (start.lat, start.lon), turn_right)
+    l, _, v2, v3 = get_turning_cirle(center, start.latlon(), turn_right)
   else:
     l, _, v2, v3 = turning_circle
     
   dist = sqrt((s - l).mag2())
   
-  radius = circle_distance((start.lat, start.lon), center)
+  radius = circle_distance(start.latlon(), center)
 
   e_ang = angle
 
@@ -293,12 +303,12 @@ def turn_towards(
     turn_right: bool) -> list[PathPoint]:
   
   # just make sure the two things are not too close to each other
-  circ_dist = circle_distance((start.lat, start.lon), dest)
+  circ_dist = circle_distance(start.latlon(), dest)
   if circ_dist < 2 * turn_radius / EARTH_RAD:
     turn_radius = circ_dist / 4
   
-  to_point = to_xyz(start.lat, start.lon)
-  tangent = get_sphere_tangent((start.lat, start.lon), inbd_crs)
+  to_point = to_xyz(*start.latlon())
+  tangent = get_sphere_tangent(start.latlon(), inbd_crs)
   v3 = to_point.cross(tangent)
   if turn_right: v3 = -v3
   
@@ -307,14 +317,14 @@ def turn_towards(
   angle = turn_radius / EARTH_RAD
   center = to_latlon(to_point * cos(angle) + v3 * sin(angle))
   
-  l, v1, v2, v3 = get_turning_cirle(center, (start.lat, start.lon), turn_right)
+  l, v1, v2, v3 = get_turning_cirle(center, start.latlon(), turn_right)
   
   # calculate how much we need to turn to directly face the destination
   # done using bisection
-  s = to_xyz(start.lat, start.lon)
+  s = to_xyz(*start.latlon())
   dist = sqrt((s - l).mag2())
   
-  assert(abs(inbd_crs - get_course((start.lat, start.lon), v3)) < TOLERANCE)
+  assert(abs(inbd_crs - get_course(start.latlon(), v3)) < TOLERANCE)
   
   # cur course = a
   # target course = b
@@ -371,14 +381,16 @@ def turn_to_course_towards(
     min_radius: float,
     points_density: int,
     turn_right: bool
-):
+) -> list[PathPoint]:
   # The turning circle intersects the radial if and only if
   # min_dist(circle center, radial) <= radius
   # Furthermore, radius - min_dist(circle center, radial) is increasing
   # So we can bisect
   
-  to_point = to_xyz(start.lat, start.lon)
-  tangent = get_sphere_tangent((start.lat, start.lon), inbd_crs)
+  print(inbd_crs * 180 / pi)
+  
+  to_point = to_xyz(*start.latlon())
+  tangent = get_sphere_tangent(start.latlon(), inbd_crs)
   v3 = to_point.cross(tangent)
   if turn_right: v3 = -v3
   
@@ -387,7 +399,7 @@ def turn_to_course_towards(
   high = -1
   ITERATIONS = 60
   step = 1 / EARTH_RAD
-  for i in range(ITERATIONS):
+  for i in range(10): # 1024 nautical miles should be more than enough
     radius = low + step * (2**i)
     center = to_latlon(to_point * cos(radius) + v3 * sin(radius))
     dist = point_dist_to_line(center, dest, course)
@@ -397,9 +409,6 @@ def turn_to_course_towards(
       low = radius / 2
       break
   if high == -1: raise Exception("Could not find a large enough circle")
-    
-  # realistically, no turn should need more than 5 nautical miles of radius
-  high = min(5 / EARTH_RAD, circle_distance((start.lat, start.lon), dest))
   
   TOL = 0.0000000000001
   ans = -1
@@ -420,7 +429,7 @@ def turn_to_course_towards(
 
   center = to_point * cos(ans) + v3 * sin(ans)
   center_l = to_latlon(center)
-  l, v1, v2, v3 = get_turning_cirle(center_l, (start.lat, start.lon), turn_right)
+  l, v1, v2, v3 = get_turning_cirle(center_l, start.latlon(), turn_right)
   
   circ_dist = sqrt((to_point - center).mag2())
   v2d = v2 * circ_dist
@@ -454,14 +463,58 @@ def turn_to_course_towards(
     rhs = asin(-l.dot(norm) / k)
     
     a1 = rhs
-    # a2 = pi - rhs
+    a2 = pi - rhs
     ans1 = (a1 - c) % (2 * pi)
-    # ans2 = (a2 - c) % (2 * pi)
+    ans2 = (a2 - c) % (2 * pi)
     
-    return get_arc_points_angle(center_l, start, ans1, points_density, turn_right, (l, v1, v2, v3))
+    ans = min(ans1, ans2)
+    
+    return get_arc_points_angle(center_l, start, ans, points_density, turn_right, (l, v1, v2, v3))
   else:
-    raise Exception("Could not find a large enough circle")
+    # just fly direct
+    return []
+
+def go_dist_from(start: tuple[float, float], course: float, dist: float):
+  dist /= EARTH_RAD
+  start_xyz = to_xyz(*start)
+  tangent = get_sphere_tangent(start, course)
+  return to_latlon(start_xyz * cos(dist) + tangent * sin(dist))
+
+def go_to_dme(start: tuple[float, float], course: float, ref: tuple[float, float], dme: float, alt: float = 0):
+  dme_ft = dme * NM_TO_FT
+  if alt > dme_ft: raise ValueError("Altitude was higher than the required DME distance.")
   
+  w = to_xyz(*ref)
+  # calculate the ground distance required to achieve a certain DME
+  # note that this is an approximation
+  d = sqrt(dme_ft*dme_ft - alt*alt) / NM_TO_FT
+  d /= EARTH_RAD
+  
+  v1 = to_xyz(*start)
+  v2 = get_sphere_tangent(start, course)
+  
+  # f(a) = v1 cos(a) + v2 sin(a)
+  # want: f(a) dot w = cos(d)
+  # v1 dot w cos(a) + v2 dot w sin(a) = cos(d)
+  # k sin(a + c) = cos(d)
+  v1r = v1.dot(w)
+  v2r = v2.dot(w)
+  k = sqrt(v1r * v1r + v2r * v2r)
+  c = atan2(v1r, v2r)
+  
+  if abs(cos(d)) > k:
+    raise ValueError("This DME can never be intersected.")
+  rhs = asin(cos(d) / k)
+  a1 = rhs
+  a2 = pi - rhs
+  ans1 = (a1 - c) % (2 * pi)
+  ans2 = (a2 - c) % (2 * pi)
+  
+  ans = min(ans1, ans2)
+  point = v1 * cos(ans) + v2 * sin(ans)
+  
+  return to_latlon(point)
+
 def turn_from(
     start: PathPoint,
     inbd_crs: float,
@@ -472,8 +525,8 @@ def turn_from(
   # observation: when turning at a constant rate from a point, the center of the turning circle
   # will always be at a right angle to the current course, so we can find this center easily
   # by walking perpencidular to the current course, at a distance of the turning radius
-  to_point = to_xyz(start.lat, start.lon)
-  tangent = get_sphere_tangent((start.lat, start.lon), inbd_crs)
+  to_point = to_xyz(*start.latlon())
+  tangent = get_sphere_tangent(start.latlon(), inbd_crs)
   v3 = to_point.cross(tangent)
   if turn_right: v3 = -v3
   
@@ -494,12 +547,12 @@ def turn_from(
   # after turning some amount on a circle
   
   # note that v3 is exactly the inbound tangent vector
-  l, v1, v2, v3 = get_turning_cirle(center, (start.lat, start.lon), turn_right)
+  l, v1, v2, v3 = get_turning_cirle(center, start.latlon(), turn_right)
   
-  s = to_xyz(start.lat, start.lon)
+  s = to_xyz(*start.latlon())
   dist = sqrt((s - l).mag2())
   
-  assert(abs(inbd_crs - get_course((start.lat, start.lon), v3)) < TOLERANCE)
+  assert(abs(inbd_crs - get_course(start.latlon(), v3)) < TOLERANCE)
   
   def shift_angle(angle: float):
     if turn_right and 0 <= angle < inbd_crs: angle += 2 * pi

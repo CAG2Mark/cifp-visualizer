@@ -17,7 +17,7 @@ def parse_course(crs: str) -> Course:
   
 class NavDatabase:
   
-  waypoints: dict[str, dict[str, Waypoint]] = defaultdict(lambda: {})
+  waypoints: dict[tuple[str, str], dict[str, Waypoint]] = defaultdict(lambda: {})
   runway_waypoints: dict[str, dict[str, Waypoint]] = defaultdict(lambda: {})
   airports: dict[str, AirportInfo] = {}
   
@@ -31,14 +31,11 @@ class NavDatabase:
     for d in data:
       if d == "99": break
       d = d.strip()
-      lat, lon, name, _, region = d.split()[:5]
+      lat, lon, name, airport, region = d.split()[:5]
       lat = float(lat)
       lon = float(lon)
       
-      if not region in self.waypoints:
-        self.waypoints[region] = {}
-      
-      self.waypoints[region][name] = Waypoint(name, lat, lon, region)
+      self.waypoints[(region, airport)][name] = Waypoint(name, lat, lon, region, airport)
       
     # load other navaids (NBD, VOR, DME)
     with open(dir + "/earth_nav.dat") as f:
@@ -57,9 +54,9 @@ class NavDatabase:
       if not d[0] in ["2", "3", "4", "5", "12", "13"]: continue
       
       if d[0] == "4":
-        self.runway_waypoints[airport][name] = Waypoint(name, lat, lon, region)
+        self.runway_waypoints[airport][name] = Waypoint(name, lat, lon, region, airport)
       
-      self.waypoints[region][name] = Waypoint(name, lat, lon, region)
+      self.waypoints[(region, airport)][name] = Waypoint(name, lat, lon, region, airport)
       
     # load airports
     with open(dir + "/earth_aptmeta.dat") as f:
@@ -78,13 +75,20 @@ class NavDatabase:
       self.airports[ident] = AirportInfo(ident, lat, lon, region, elev, ta, tl)
       
   
-  def get_waypoint(self, name: str, region: str) -> Waypoint:
-    if not region in self.waypoints:
-      raise KeyError("Region `" + region + "` not found.")
-    r = self.waypoints[region]
+  def get_waypoint(self, name: str, region: str, airport: str) -> Waypoint:
+    if not (region, airport) in self.waypoints:
+      if not (region, "ENRT") in self.waypoints:
+        raise KeyError(f"Region `{region}` not found.")  
+      else:
+        r = self.waypoints[(region, "ENRT")]
+    else:
+      r = self.waypoints[(region, airport)]
     if not name in r:
-      raise KeyError("Waypoint `" + name + "` in region `" + region + "` not found.")
-    return self.waypoints[region][name]
+      enrt = self.waypoints[(region, "ENRT")]
+      if not name in enrt:
+        raise KeyError("Waypoint `" + name + "` in region `" + region + "` not found.")
+      return enrt[name]
+    return r[name]
     
   def process_alt_desc(self, data: list[str]) -> AltRestr | None:
     kind = data[22]
@@ -145,7 +149,7 @@ class NavDatabase:
     
     raise ValueError("Speed description " + kind + " not recognized.")
   
-  def process_waypoint(self, data: list[str], airport: str, start_idx = 4) -> Waypoint:
+  def process_waypoint(self, data: list[str], airport: str, start_idx: int = 4) -> Waypoint:
     """
       4 = normal fix\n
       13 = recommended navaid\n
@@ -161,17 +165,18 @@ class NavDatabase:
         # airport or heliport waypoint
         if not fix in self.airports:
           raise KeyError(f"Airport `{fix}` not found." )
-        airport = self.airports[fix]
-        return Waypoint(airport.icao, airport.lat, airport.lon, airport.region)
+        arpt = self.airports[fix]
+        return Waypoint(arpt.icao, arpt.lat, arpt.lon, arpt.region, arpt.icao)
       if desc[0] == "G":
         # runway or helipad waypoint
         if fix in self.runway_waypoints[airport]:
           return self.runway_waypoints[airport][fix]
         # just recover by returning the airport coordaintes
-        airport = self.airports[airport]
-        return Waypoint(airport.icao, airport.lat, airport.lon, airport.region)
-    
-    return self.get_waypoint(fix, icao)
+        arpt = self.airports[fix]
+        return Waypoint(arpt.icao, arpt.lat, arpt.lon, arpt.region, arpt.icao)
+      if desc[0] == "N" or desc[0] == "V":
+        self.get_waypoint(fix, icao, "ENRT")
+    return self.get_waypoint(fix, icao, airport)
   
   def process_course(self, data: list[str]) -> Course:
     return parse_course(data[20])
@@ -273,14 +278,16 @@ class NavDatabase:
     
     if kind == "FC":
       start = self.process_waypoint(data, airport)
+      course = self.process_course(data)
       dist = self.process_dist(data)
-      return FixToDistance(info, start, dist)
+      return FixToDistance(info, start, course, dist)
   
     if kind == "FD":
       start = self.process_waypoint(data, airport)
-      to = self.process_waypoint(data, airport, 13)
+      course = self.process_course(data)
+      ref = self.process_waypoint(data, airport, 13)
       dme = self.process_dist(data)
-      return FixToDME(info, start, to, dme)
+      return FixToDME(info, start, course, ref, dme)
 
     if kind == "FM":
       start = self.process_waypoint(data, airport)
@@ -417,7 +424,7 @@ class NavDatabase:
       lon = lons * (int(lon[1:4]) + int(lon[4:6]) / 60 + int(lon[6:]) / 360000)
       
       region = self.airports[airport].region if airport in self.airports else ""
-      self.runway_waypoints[airport][rwy] = Waypoint(rwy, lat, lon, region)
+      self.runway_waypoints[airport][rwy] = Waypoint(rwy, lat, lon, region, airport)
   
     # type, qual, proc ident, trans ident
     procedures: dict[tuple[ProcKind, str, str, str], list[Leg]] = defaultdict(lambda: [])
