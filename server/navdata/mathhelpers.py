@@ -3,6 +3,7 @@ from pygeomag import GeoMag
 import datetime
 from math import cos, sin, asin, acos, atan2, sqrt, pi, ceil
 from typing import Self
+import numpy as np
 
 NM_TO_FT = 6076.12
 
@@ -10,6 +11,8 @@ NM_TO_FT = 6076.12
 geo_mag = GeoMag(coefficients_file="wmm/WMMHR.COF", high_resolution=True)
 year = datetime.date.today().year
 def to_mag(latlon: tuple[float, float], course: Course, alt: float = 0):
+  if course.truenorth: return course.as_rad()
+  
   decl = geo_mag.calculate(
     glat = latlon[0] * 180 / pi,
     glon = latlon[1] * 180 / pi,
@@ -17,18 +20,6 @@ def to_mag(latlon: tuple[float, float], course: Course, alt: float = 0):
     time = year
   ).d * pi / 180
   return course.as_rad() + decl
-
-@dataclass
-class PathPoint:
-  lat: float # radians
-  lon: float # radians
-  course: float # **inbound** course, true, and in radians
-  altitude: float
-  def latlon(self):
-    return (self.lat, self.lon)
-  
-  def print_deg(self):
-    print(f"PathPoint(lat={self.lat * 180 / pi}, lon={self.lon * 180 / pi}, course={self.course * 180 / pi}, altitude={self.altitude})")
 
 EARTH_RAD = 3443.9184665
 # EARTH_RAD = 1
@@ -38,6 +29,8 @@ class Vec3:
   x: float
   y: float
   z: float
+  
+  def as_arr(self): return [self.x, self.y, self.z]
   
   def normalize(self) -> Self:
     x = self.x
@@ -288,7 +281,7 @@ def get_arc_points_angle(
     ang = step * (i + 1)
     lat, lon = to_latlon(v2d * cos(ang) + v3d * sin(ang) + l)
     tangent = -v2 * sin(ang) + v3 * cos(ang)
-    point = PathPoint(lat, lon, get_course((lat, lon), tangent), -1) # altitude populated later
+    point = PathPoint(lat, lon, get_course((lat, lon), tangent)) # altitude populated later
     points_xyz.append(point)
   
   return points_xyz
@@ -386,8 +379,6 @@ def turn_to_course_towards(
   # min_dist(circle center, radial) <= radius
   # Furthermore, radius - min_dist(circle center, radial) is increasing
   # So we can bisect
-  
-  print(inbd_crs * 180 / pi)
   
   to_point = to_xyz(*start.latlon())
   tangent = get_sphere_tangent(start.latlon(), inbd_crs)
@@ -604,11 +595,13 @@ def to_xyz(lat: float, lon: float) -> Vec3:
     sin(lat)
   )
 
-def to_xyz_earth(lat: float, lon: float) -> Vec3:
+def to_xyz_earth(lat: float, lon: float, altitude: float) -> Vec3:
+  radius = EARTH_RAD + (altitude / NM_TO_FT)
+  # the order and sign is different to accomodate threejs
   return Vec3(
-    EARTH_RAD * cos(lat) * cos(lon),
-    EARTH_RAD * cos(lat) * sin(lon),
-    EARTH_RAD * sin(lat)
+    radius * cos(lat) * cos(lon),
+    radius * sin(lat),
+    -radius * cos(lat) * sin(lon),
   )
 
 def to_latlon(v: Vec3) -> tuple[float, float]:
@@ -617,8 +610,9 @@ def to_latlon(v: Vec3) -> tuple[float, float]:
     atan2(v.y, v.x)
   )
 
-def to_latlon_earth(v: Vec3) -> tuple[float, float]:
-  return (
-    asin(v.z / EARTH_RAD),
-    atan2(v.y, v.x)
-  )
+def solve_matrix(lhs: list[list[float]], rhs: list[float]):
+  arr = np.array(lhs, np.float64)
+  arr = np.linalg.inv(arr)
+  sol = arr @ np.array(rhs, np.float64)
+  return Vec3(sol[0].item(), sol[1].item(), sol[2].item())
+  

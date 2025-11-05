@@ -149,6 +149,24 @@ class NavDatabase:
     
     raise ValueError("Speed description " + kind + " not recognized.")
   
+  def get_runway_waypoint(self, airport: str, rwy: str, opposite_end = False):
+    key = rwy
+    if opposite_end:
+      rwy_no = int(rwy[2:4])
+      rwy_des = rwy[4] if len(rwy) == 5 else ""
+      rwy_no = (rwy_no + 18) % 36
+      if rwy_no == 0: rwy_no = 36
+      if rwy_des == "L": rwy_des = "R"
+      elif rwy_des == "R": rwy_des = "L"
+      key = "RW" + str(rwy_no).rjust(2, "0") + rwy_des
+
+    # runway or helipad waypoint
+    if key in self.runway_waypoints[airport]:
+      return self.runway_waypoints[airport][key]
+    # just recover by returning the airport coordaintes
+    arpt = self.airports[airport]
+    return Waypoint(arpt.icao, arpt.lat, arpt.lon, arpt.region, arpt.icao)
+  
   def process_waypoint(self, data: list[str], airport: str, start_idx: int = 4) -> Waypoint:
     """
       4 = normal fix\n
@@ -168,12 +186,7 @@ class NavDatabase:
         arpt = self.airports[fix]
         return Waypoint(arpt.icao, arpt.lat, arpt.lon, arpt.region, arpt.icao)
       if desc[0] == "G":
-        # runway or helipad waypoint
-        if fix in self.runway_waypoints[airport]:
-          return self.runway_waypoints[airport][fix]
-        # just recover by returning the airport coordaintes
-        arpt = self.airports[fix]
-        return Waypoint(arpt.icao, arpt.lat, arpt.lon, arpt.region, arpt.icao)
+        return self.get_runway_waypoint(airport, fix)
       if desc[0] == "N" or desc[0] == "V":
         self.get_waypoint(fix, icao, "ENRT")
     return self.get_waypoint(fix, icao, airport)
@@ -477,7 +490,7 @@ class NavDatabase:
             
       if kind == ProcKind.SID:
         proc = sids[proc_id]
-        if qual in ["0", "1", "2", "4", "F", "M", "T", "V"]:
+        if qual in ["0", "1", "2", "4", "5", "F", "M", "T", "V"]:
           if trans_id:
             proc.rwys = self.parse_rwy(trans_id, airport)
           proc.legs = legs

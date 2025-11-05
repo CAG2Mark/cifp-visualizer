@@ -3,11 +3,17 @@ from enum import Enum
 from math import pi
 
 @dataclass
+class AircraftConfig:
+  min_turn_tadius: float
+  climb_grad: float
+  descent_grad: float
+
+@dataclass
 class PathPoint:
   lat: float # radians
   lon: float # radians
   course: float # **inbound** course, true, and in radians
-  altitude: float = -1
+  altitude: float = float('-inf')
   
   def latlon(self):
     return (self.lat, self.lon)
@@ -129,7 +135,7 @@ class LegInfo:
 
 @dataclass
 class Leg:
-  def type_str(self):
+  def type_str(self) -> str:
     raise NotImplementedError("Not implemented")
   info: LegInfo
 

@@ -85,6 +85,8 @@ class CIFPServer(BaseHTTPRequestHandler):
             ct = "text/javascript"
           elif values[-1].endswith(".mtl"):
             ct = "model/mtl"
+          elif values[-1].endswith(".obj"):
+            ct = "model/obj"
           else:
             self.send_response(404)
             self.end_headers()
@@ -92,7 +94,6 @@ class CIFPServer(BaseHTTPRequestHandler):
               
           with open(path) as f:
             content = bytes(f.read(), encoding="UTF-8")
-          print(path)
           self.send_response(200)
           self.send_header("Content-type", ct)
           self.end_headers()
@@ -255,7 +256,7 @@ if __name__ == "__main__":
         key, val = ln.split("=")
         cfg[key.strip()] = val.strip()
   except OSError:
-    print("Could not open config file.")
+    logger.error("Could not open config file.")
     exit(1)
   
   navdata_dir = cfg["data_dir"]
