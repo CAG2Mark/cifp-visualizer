@@ -29,7 +29,8 @@ except OSError:
 navdata_dir = cfg["data_dir"]
 if navdata_dir.endswith("/"): navdata_dir = navdata_dir[:-1]
 logger.info("Loading navdata from " + navdata_dir + ".")
-data = NavDatabase(navdata_dir)
+navdata = NavDatabase(navdata_dir)
+set_navdata(navdata)
 logger.info("Navdata loaded.")
 
 def start_server():
@@ -44,7 +45,7 @@ def start_server():
   webServer.server_close()
   logger.info("Server stopped.")
 
-DEBUG = True
+DEBUG = False
 if not DEBUG:
   start_server()
 else:
@@ -62,7 +63,7 @@ else:
   # airport, appch_nme, trans_nme = ("EGPB", "D27", "SUM2")
   # airport, appch_nme, trans_nme = ("EGPB", "D27", "SUM3")
   # airport, appch_nme, trans_nme = ("EGPB", "D27", "D063L")
-  airport, appch_nme, trans_nme = ("EGPB", "D27", "D355L")
+  # airport, appch_nme, trans_nme = ("EGPB", "D27", "D355L")
   # airport, appch_nme, trans_nme = ("LGSK", "Q01", "SKP")
   # airport, appch_nme, trans_nme = ("VNKT", "R20", "IGRIS")
   # airport, appch_nme, trans_nme = ("VNKT", "R20", "DANFE")
@@ -74,18 +75,20 @@ else:
   # airport, appch_nme, trans_nme = ("ENSB", "L27", "ADV1")
   # airport, appch_nme, trans_nme = ("NZFX", "T15T", "FAVGU") # TODO
   # airport, appch_nme, trans_nme = ("NZQN", "R23-Y", "ATKIL")
+  airport, appch_nme, trans_nme = ("SPZO", "R28", "SDARK")
   
   SID = False
   
   dir = "/home/mark/gamedrive/xplane-12/Custom Data/"
   #starts = set()
-  res = data.get_airport_data(airport_) if SID else data.get_airport_data(airport)
+  res = navdata.get_airport_data(airport_) if SID else navdata.get_airport_data(airport)
   #for a in os.listdir(dir + "/CIFP"):
   #  res = data.get_airport_data(a[:-4])
   #  if res:
   #    _, _, _, s = res
   #    for e in s: starts.add(e)
   #print(starts)
+
   if SID and res:
     sids, stars, appches = res
     sid = sids[sid]
@@ -95,7 +98,7 @@ else:
     print(sid.rwys)
     start = data.get_runway_waypoint(airport_, "RW" + rwy, True)
     
-    leg_points = point_builder.build_points(legs, ac_cfg, start, -1, 28, True)
+    leg_points, all_points = point_builder.build_points(legs, ac_cfg, start.to_rad(), -1, 28, True)
     
     def plot_points():
       import pylab as pl
@@ -127,16 +130,7 @@ else:
     
     assert not map_legs is None
     
-    leg_points = point_builder.build_points(legs, ac_cfg, None, -1, 11000, False)
-    
-    objs = build_3d(leg_points)
-    
-    for l, obj in objs:
-      filename = airport + "_" + appch_nme + "_" + trans_nme + "_" + l.info.qual + "_" + str(l.info.seq) + ".obj"
-      obj.export_obj("viewer/" + filename)
-    
-    start_server()
-    exit()
+    leg_points, all_points = point_builder.build_points(legs, ac_cfg, None, -1, 11000, False)
     
     def plot_points():
       import pylab as pl
@@ -146,7 +140,7 @@ else:
           pl.plot(p.lon * 180 / pi, p.lat * 180 / pi, "bo")
       pl.show()
         
-    # plot_points()
+    plot_points()
     print()
     for (_, points) in leg_points:
       for p in points:
@@ -170,7 +164,7 @@ else:
     #for r in res:
     #  print(r.lat * 180 / pi, r.lon * 180 / pi)
     
-    points = point_builder.build_points(legs, -1, 4000, False)
+    points, all_points = point_builder.build_points(legs, -1, 4000, False)
     for p in points:
       p.print_deg()
     

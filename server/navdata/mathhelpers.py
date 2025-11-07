@@ -295,6 +295,8 @@ def turn_towards(
     points_density: int,
     turn_right: bool) -> list[PathPoint]:
   
+  if (to_xyz(*start.latlon()) - to_xyz(*dest)).mag2() < TOLERANCE * TOLERANCE: return [] 
+
   # just make sure the two things are not too close to each other
   circ_dist = circle_distance(start.latlon(), dest)
   if circ_dist < 2 * turn_radius / EARTH_RAD:
@@ -359,7 +361,7 @@ def turn_towards(
     if ang < best:
       best = ang
       best_ang = turn
-  
+
   # one degree of tolerance
   if best > 2 * pi / 360 or best_ang == -1:
     return [] # just give up and fly directly to the dest

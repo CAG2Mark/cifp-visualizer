@@ -2,6 +2,7 @@ from server.navdata.defns import *
 from collections import defaultdict
 from server.util import querydict
 import os
+import functools
 
 def parse_alt(data: str) -> int:
   if data.startswith("FL"): return int(data[2:]) * 100
@@ -393,7 +394,8 @@ class NavDatabase:
       return HoldToManual(info, fix, disttime, course)
     
     raise ValueError("Leg type " + kind + " not recognized.")
-    
+  
+  @functools.cache
   def get_airport_data(self, airport: str):
     path = self.dir + "/CIFP/" + airport + ".dat"
     with open(path) as f:
@@ -468,11 +470,11 @@ class NavDatabase:
     return self.sort_data(procedures, airport)
   
   def parse_rwy(self, rwy: str, airport: str) -> list[str]:
-    if rwy == "ALL": return self.airports[airport].runways
+    if rwy == "ALL": return [x[2:] for x in self.airports[airport].runways]
     if rwy[0:2] != "RW": return []
     rwy = rwy[2:]
     if rwy[-1] == "B":
-      return list(filter(lambda x: x.startswith("RW" + rwy[:-1]), self.airports[airport].runways))
+      return [x[2:] for x in list(filter(lambda x: x.startswith("RW" + rwy[:-1]), self.airports[airport].runways))]
     return [rwy]
   
   def extract_rwy(self, proc: str) -> str | None:

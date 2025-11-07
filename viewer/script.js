@@ -5,7 +5,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 var TO_RAD = Math.PI / 180;
 
 var camera, scene, renderer;
-var lat = 59, lon = -2;
+var lat = 45, lon = 8;
 var latR = TO_RAD * lat;
 var lonR = TO_RAD * lon;
 var UPDOWN_BOUND = 87 * TO_RAD;
@@ -17,11 +17,44 @@ let UP = new THREE.Vector3(
 );
 
 let UP_shifted = new THREE.Vector3(
-    Math.cos(latR+0.1) * Math.cos(lonR+0.1),
-    Math.sin(latR+0.1),
-    -Math.cos(latR+0.1) * Math.sin(lonR+0.1)
+    Math.cos(latR + 0.1) * Math.cos(lonR + 0.1),
+    Math.sin(latR + 0.1),
+    -Math.cos(latR + 0.1) * Math.sin(lonR + 0.1)
 );
 
+// http://localhost:8080/proc/SPZO/approach/R28/SDARK/28/20A.obj
+
+let airport = "LSZA"
+let kind = "approach"
+let ident = "G01"
+let trans = "CALDO"
+let rwy = "01"
+
+
+async function load_approach(airport, kind, ident, trans, rwy) {
+    let prefix = `../proc/${airport}/${kind}/${ident}/${trans}`
+    let data = await (await fetch(`../proc/${airport}/${kind}/${ident}/${trans}`)).json()
+    
+    let promises = []
+    for (let i = 0; i < data.length; ++i) {
+        let leg = data[i]
+        promises.push(load_obj(`${prefix}/${rwy}/${leg["legId"]}.obj`))
+    }
+    await Promise.all(promises)
+}
+
+function do_debug() {
+    load_approach(airport, kind, ident, trans, rwy)
+    // await load_obj("../proc/SPZO/approach/R28/SDARK/28/R20.obj")
+    // await load_obj("../proc/SPZO/approach/R28/SDARK/28/R22.obj")
+    let a = load_tile(lat, lon, 13);
+    // let b = load_tile(lat, lon + 1, 13);
+    //let c = load_tile(lat + 1, lon, 13);
+    //let d = load_tile(lat + 1, lon + 1, 13);
+    //Promise.all([a, b, c, d]);
+
+    go_to_tile(lat, lon)
+}
 
 let NEGUP = new THREE.Vector3(UP.x, UP.y, UP.z).negate();
 
@@ -86,7 +119,7 @@ function go_to_tile(lat, lon) {
 async function load_tile(lat, lon, zl) {
     // ensure the things that need loading
     // photo URL
-    let photo = `../photo/${lat}/${lon}/${zl}.jpg`;
+    let photo = `../photo/${lat}/${lon}/${zl}.png`;
     let terr = `../terrain/${lat}/${lon}/0.obj`;
 
     let a = ensure_url(photo);
@@ -106,7 +139,7 @@ async function load_tile(lat, lon, zl) {
             loader.load(
                 terr,
                 function (object) {
-                    var texture = new THREE.TextureLoader().load(`../photo/${lat}/${lon}/${zl}.jpg`);
+                    var texture = new THREE.TextureLoader().load(`../photo/${lat}/${lon}/${zl}.png`);
 
                     object.traverse(function (child) {   // aka setTexture
                         if (child instanceof THREE.Mesh) {
@@ -152,21 +185,7 @@ last_update = window.performance.now();
 animate();
 
 
-// let a = load_tile(lat, lon, 13);
-// let b = load_tile(lat + 1, lon, 13);
-//let c = load_tile(lat + 1, lon, 13);
-//let d = load_tile(lat + 1, lon + 1, 13);
-//Promise.all([a, b, c, d]);
-
-go_to_tile(lat, lon)
-
-// await load_obj("EGPB_D27_D355L_A_10.obj");
-// await load_obj("EGPB_D27_D355L_A_20.obj");
-// await load_obj("EGPB_D27_D355L_A_30.obj");
-await load_obj("EGPB_D27_D355L_A_40.obj");
-// await load_obj("EGPB_D27_D355L_A_40_good.obj");
-// await load_obj("EGPB_D27_D355L_D_20.obj");
-// await load_obj("EGPB_D27_D355L_D_30.obj");
+do_debug()
 
 function init() {
 

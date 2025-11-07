@@ -77,14 +77,20 @@ def points_dist(points: list[PathPoint]):
 def build_points(
     legs: list[Leg],
     config: AircraftConfig,
-    start_point: Waypoint | None,
+    start_point: tuple[float, float] | None,
     start_course: float | None,
     start_alt: float,
     ascending: bool):
+  
   leg_points: list[tuple[Leg, list[PathPoint]]] = []
   all_points: list[PathPoint] = []
   
   cstrs = build_alt_constr(legs, ascending)
+  
+  match legs[0]:
+    case CourseToAlt() | HeadingToAlt() | FixToAltitude(): pass
+    case _:
+      start_alt = min(cstrs[0][1], max(cstrs[0][0], start_alt))
   
   if start_course is None:
     cur_course = -1
@@ -126,6 +132,8 @@ def build_points(
       p1 = all_points[-1]
       p2 = all_points[-2]
     else: return
+    
+    if (to_xyz(*p1.latlon()) - to_xyz(*p2.latlon())).mag2() < TOLERANCE: return
       
     crs = get_course_between(p2.latlon(), p1.latlon())
     if crs != -1: cur_course = crs
@@ -215,18 +223,23 @@ def build_points(
       
       
       if all_points and points:
-        initial_dist = earth_distance(all_points[-1].latlon(), points[0].latlon())
+        try:
+          initial_dist = earth_distance(all_points[-1].latlon(), points[0].latlon())
+        except:
+          initial_dist = 0
       else:
         initial_dist = 0
       
       dist = initial_dist
       total_dist = points_dist(points) + dist
       target_alt = min(below, max(above, cur_alt + grad * total_dist * NM_TO_FT))
-
-      if ascending:
-        grad = max(grad, (target_alt - cur_alt) / (total_dist * NM_TO_FT))
+      
+      if total_dist < TOLERANCE: grad = 0
       else:
-        grad = min(grad, (target_alt - cur_alt) / (total_dist * NM_TO_FT))
+        if ascending:
+          grad = max(grad, (target_alt - cur_alt) / (total_dist * NM_TO_FT))
+        else:
+          grad = min(grad, (target_alt - cur_alt) / (total_dist * NM_TO_FT))
       
       for i, p in enumerate(points):
         if i > 0:
@@ -266,7 +279,7 @@ def build_points(
         cur_course = crs
       case _: pass
   else:
-    pnt = PathPoint(*start_point.to_rad(), cur_course, start_alt)
+    pnt = PathPoint(*start_point, cur_course, start_alt)
     points.append(pnt)
     all_points.append(pnt)
   
@@ -509,20 +522,21 @@ def build_points(
       case ProcTurn(info, fix, alt, course, max_dist):
         raise NotImplementedError()
         pass
-      case HoldAlt(info, fix, alt, disttime, course):
-        raise NotImplementedError()
-        pass
-      case HoldFix(info, fix, disttime, course):
-        # raise NotImplementedError()
-        points.append(PathPoint(*waypoint_rad(fix), cur_course, cur_alt))
-        auto_course()
-        pass
-      case HoldToManual(info, fix, disttime, course):
-        raise NotImplementedError()
-        pass
 
+      case HoldAlt(info, fix, _, _, _) | HoldFix(info, fix, _, _) | HoldToManual(info, fix, _, _):
+        # raise NotImplementedError()
+        req_crs = course_to(fix)
+        td = turn_dir(leg, req_crs)
+        if overfly:
+          new_p = turn_towards(last_point(), cur_course, fix.to_rad(), config.min_turn_tadius, POINT_DENSITY, td)
+          points += new_p
+        points.append(PathPoint(
+          *fix.to_rad(), course_to(fix)
+        ))
+        auto_course()
+        overfly = info.overfly
       case Leg(_): raise ValueError("Invalid leg")
     
     if not intercepting:
       append_leg(i)
-  return leg_points
+  return (leg_points, all_points)

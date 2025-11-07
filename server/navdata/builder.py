@@ -1,9 +1,10 @@
 from server.navdata.defns import *
 from server.navdata.mathhelpers import *
 from server.navdata.point_builder import *
+from server.server import get_navdata
 
-WIDTH = 500 / NM_TO_FT
-HEIGHT = 250 / NM_TO_FT
+WIDTH = 300 / NM_TO_FT
+HEIGHT = 100 / NM_TO_FT
 
 @dataclass
 class Object3D:
@@ -46,17 +47,26 @@ class SectionObject:
   
   start_rect: Rect3D
 
-def compute_intersection(a: Vec3, b: Vec3, c: Vec3, x: float, y: float, z: float):
-  mat = [a.as_arr(), b.as_arr(), c.as_arr()]
-  rhs = [x, y, z]
-  return solve_matrix(mat, rhs)
+# one of (a, c) or (b, d) may be parallel
+def compute_intersection(a: Vec3, b: Vec3, c: Vec3, d: Vec3, x: float, y: float, z: float, w: float, default: Vec3):
+  try:
+    mat = [a.as_arr(), b.as_arr(), c.as_arr()]
+    rhs = [x, y, z]
+    return solve_matrix(mat, rhs)
+  except:
+    try:
+      mat = [a.as_arr(), b.as_arr(), d.as_arr()]
+      rhs = [y, z, w]
+      return solve_matrix(mat, rhs)
+    except:
+      return default
 
 def make_section_obj(prev_sec: SectionObject | None, p1: Vec3, p2: Vec3) -> SectionObject:
   tangent = (p2 - p1).normalize()
   normal = (p1 + p2).normalize()
   normal = normal - tangent * tangent.dot(normal)
   binormal = tangent.cross(normal)
-  
+
   top_left_point = p1 - binormal * WIDTH + normal * HEIGHT
   top_right_point = p1 + binormal * WIDTH + normal * HEIGHT
   bottom_right_point = p1 + binormal * WIDTH - normal * HEIGHT
@@ -72,19 +82,26 @@ def make_section_obj(prev_sec: SectionObject | None, p1: Vec3, p2: Vec3) -> Sect
       p1, p2, tangent, normal, binormal, top, left, bottom, right, 
       Rect3D(top_left_point, top_right_point, bottom_right_point, bottom_left_point))
   if not prev_sec is None:
-    try:
-      tl = compute_intersection(normal, binormal, prev_sec.normal, top, left, prev_sec.top)
-      tr = compute_intersection(normal, binormal, prev_sec.binormal, top, right, prev_sec.right)
-      br = compute_intersection(normal, binormal, prev_sec.normal, bottom, right, prev_sec.bottom)
-      bl = compute_intersection(normal, binormal, prev_sec.binormal, bottom, left, prev_sec.right)
-      
-      print(tl.dot(prev_sec.binormal) - prev_sec.left)
-      
-      return SectionObject(
-        p1, p2, tangent, normal, binormal, top, left, bottom, right, 
-        Rect3D(tl, tr, br, bl))
-    except:
-      return default_return()
+    tl = compute_intersection(
+      normal, binormal, prev_sec.normal,  prev_sec.binormal,
+      top,    left,     prev_sec.top,     prev_sec.left,
+      top_left_point)
+    tr = compute_intersection(
+      normal, binormal, prev_sec.normal,  prev_sec.binormal,
+      top,    right,    prev_sec.top,     prev_sec.right,
+      top_right_point)
+    bl = compute_intersection(
+      normal, binormal, prev_sec.normal,  prev_sec.binormal,
+      bottom,    left,  prev_sec.bottom,  prev_sec.left,
+      bottom_left_point)
+    br = compute_intersection(
+      normal, binormal, prev_sec.normal,  prev_sec.binormal,
+      bottom, right,    prev_sec.bottom,  prev_sec.right,
+      bottom_right_point)
+
+    return SectionObject(
+      p1, p2, tangent, normal, binormal, top, left, bottom, right, 
+      Rect3D(tl, tr, br, bl))
   else:
     return default_return()
     
@@ -165,3 +182,78 @@ def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
     ret.append((leg, obj))
   
   return ret
+
+def get_transition(proc: SID | STAR| Approach, transition: str):
+  for ident, t_legs in proc.transitions:
+    if ident == transition:
+      return t_legs
+  raise KeyError("Invalid transition. Possible transitions are: " + ",".join([x[0] for x in proc.transitions]))
+
+def leg_file_name(airport: str, info: LegInfo):
+  return f"{airport}_{info.proc}_{info.trans}"
+
+def make_proc_sig(airport: str, proc: str, runway: str | None, transition: str | None):
+  if not runway: runway = "n"
+  if not transition: transition = "n"
+  return f"{airport}_{proc}_{runway}_{transition}"
+
+def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str | None, transition: str | None, start_alt: int):
+  match proc:
+    case SID(_, airport, rwys, legs, _):
+      if not runway:
+        raise ValueError("A runway is required for SIDs.")
+      if not runway in rwys:
+        raise KeyError("Invalid runway. Possible runways are: " + ",".join(rwys))
+      airport_data = get_navdata().airports[airport]
+      start = get_navdata().get_runway_waypoint(airport, "RW" + runway, True)
+      start_alt = airport_data.elevation
+      
+      legs = proc.legs
+      if transition: legs += get_transition(proc, transition)
+      
+      leg_points, _ = build_points(legs, config, start.to_rad(), None, start_alt, True)
+      
+    case STAR(_, airport, rwys, legs, _):
+      if not runway:
+        raise ValueError("A runway is required for STARS.")
+      if not runway in rwys:
+        raise KeyError("Invalid runway. Possible runways are: " + ",".join(rwys))
+      
+      airport_data = get_navdata().airports[airport]
+      
+      legs = proc.legs
+      if transition: legs = get_transition(proc, transition) + legs
+      
+      leg_points, _ = build_points(legs, config, None, None, start_alt, False)
+    
+    case Approach(_, airport, rwy, legs, _):
+      if not runway:
+        raise ValueError("A runway is required for STARS.")
+      if runway != rwy:
+        raise KeyError("Invalid runway.")
+      
+      airport_data = get_navdata().airports[airport]
+      
+      legs = proc.legs
+        
+      map_legs = []
+      for i, leg in enumerate(legs):
+        if leg.info.fmap:
+          map_legs = legs[i:]
+          legs = legs[:i]
+          break
+      
+      if transition: legs = get_transition(proc, transition) + legs
+      
+      appch_leg_points, appch_all_points = build_points(legs, config, None, None, 0, False)
+      if not appch_all_points: raise Exception("Procedure contains only one point.")
+      
+      end = appch_all_points[-1]
+      
+      map_leg_points, _ = build_points(map_legs, config, end.latlon(), end.course, end.altitude, True)
+      
+      leg_points = appch_leg_points + map_leg_points
+  
+  return build_3d(leg_points)
+  
+      

@@ -1,11 +1,14 @@
 import os
 from secrets import randbelow
 from threading import Thread
+
+import requests
 import server.tiler as tiler
 import subprocess
 from os import pipe
 from server.downloaders import *
 import zipfile
+from threading import Lock
 
 def make_uuid():
   ret = [""] * 32
@@ -26,7 +29,70 @@ class Job:
 
   def __hash__(self) -> int:
     return hash(self.uuid)
+
+class CreateImageJobNew(Job):
+  def __init__(self, callback, tile: tiler.Tile, zl: int, path: str) -> None:
+    super().__init__(callback)
+    self.tile = tile
+    self.zl = zl
+    self.path = path;
+    self.status = 0;
   
+  def copy_default(self):
+    shutil.copyfile("assets/white.jpg", self.path)
+  
+  dl_progress = 0
+  prog_lock = Lock()
+  
+  def task(self):
+    x1 = self.tile.lon
+    y1 = self.tile.lat
+    x2 = x1 + 1
+    y2 = y1 + 1
+    height = min(4096, 1 << (self.zl - 1))
+    width = int(height * cos(self.tile.lat * pi / 180))
+    
+    url = f"https://tiles.maps.eox.at/wms?service=wms&request=getmap&layers=s2cloudless-2024&srs=EPSG:4326&bbox={x1},{y1},{x2},{y2}&width={width}&height={height}&format=image/png"
+    print(url)
+    r = requests.get(url, stream=True)
+    contenttype = r.headers.get("content-type")
+    print(contenttype)
+    if contenttype is None or contenttype != "image/png":
+      logger.warn(f"Did not get the expected image type when downloading tile {self.tile}. Replacing with a white image.")
+      self.copy_default()
+    elif r.status_code != 200 and r.status_code != 304:
+      logger.warn(f"Error {r.status_code} when downloading {self.tile}. Replacing with a white image.")
+      self.copy_default()
+    else:
+      with open(self.path, "wb") as f:
+        if 'content-length' in r.headers:
+          total_length = int(r.headers.get('content-length'))
+        else:
+          total_length = None
+        
+        try:
+          recv = 0
+          for data in r.iter_content(chunk_size=4096):
+            recv += len(data)
+            f.write(data)
+            if total_length:
+              with self.prog_lock:
+                self.dl_progress = recv / total_length
+        except requests.exceptions.ChunkedEncodingError:
+          logger.error("Connection error when downloading {self.tile}.")
+          self.done()
+          
+    self.done()
+    
+  def progress(self):
+    with self.prog_lock:
+      prog = int(self.dl_progress * 100)
+    return f"Downloading images for tile {self.tile.lat}, {self.tile.lon} at zoom level {self.zl}... ({prog}%)"
+  
+  def perform(self):
+    t = Thread(target = self.task)
+    t.start()
+
 class CreateImageJob(Job):
   def __init__(self, callback, tile: tiler.Tile, zl, path) -> None:
     super().__init__(callback)
