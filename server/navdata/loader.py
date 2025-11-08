@@ -150,7 +150,7 @@ class NavDatabase:
     
     raise ValueError("Speed description " + kind + " not recognized.")
   
-  def get_runway_waypoint(self, airport: str, rwy: str, opposite_end = False):
+  def get_runway_waypoint(self, airport: str, rwy: str, opposite_end: bool = False):
     key = rwy
     if opposite_end:
       rwy_no = int(rwy[2:4])
@@ -397,11 +397,14 @@ class NavDatabase:
   
   @functools.cache
   def get_airport_data(self, airport: str):
+    if not airport in self.airports: return None
+    
     path = self.dir + "/CIFP/" + airport + ".dat"
+    
+    if not os.path.exists(path): return None
+    
     with open(path) as f:
       data = f.read().split(";\n")
-      
-    if not airport in self.airports: return None
     
     # scan runway waypoints
     for ln in data:
@@ -494,26 +497,26 @@ class NavDatabase:
         proc = sids[proc_id]
         if qual in ["0", "1", "2", "4", "5", "F", "M", "T", "V"]:
           if trans_id:
-            proc.rwys = self.parse_rwy(trans_id, airport)
-          proc.legs = legs
+            rwys = self.parse_rwy(trans_id, airport)
+            for r in rwys:
+              proc.rwys[r] = legs
+            proc.is_all_rwys = trans_id == "ALL"
         elif qual in ["3", "6", "S", "V"]:
-          proc.transitions.append((trans_id, legs))
-        else:
-          proc.legs = legs
+          proc.transitions[trans_id] = legs
       elif kind == ProcKind.STAR:
         proc = stars[proc_id]
         if qual in ["2", "5", "3", "6", "8", "9", "M", "S"]:
           if trans_id:
-            proc.rwys = self.parse_rwy(trans_id, airport)
-          proc.legs = legs
+            rwys = self.parse_rwy(trans_id, airport)
+            for r in rwys:
+              proc.rwys[r] = legs
+            proc.is_all_rwys = trans_id == "ALL"
         elif qual in ["1", "4", "7", "F"]:
-          proc.transitions.append((trans_id, legs))
-        else:
-          proc.legs = legs
+          proc.transitions[trans_id] = legs
       else: # kind = approach
         proc = appches[proc_id]
         proc.rwy = self.extract_rwy(proc_id)
-        if qual == "A": proc.transitions.append((trans_id, legs))
+        if qual == "A": proc.transitions[trans_id] = legs
         else: proc.legs = legs
     return (sids, stars, appches)
 

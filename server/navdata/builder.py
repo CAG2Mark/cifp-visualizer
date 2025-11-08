@@ -2,6 +2,7 @@ from server.navdata.defns import *
 from server.navdata.mathhelpers import *
 from server.navdata.point_builder import *
 from server.server import get_navdata
+from math import floor
 
 WIDTH = 300 / NM_TO_FT
 HEIGHT = 100 / NM_TO_FT
@@ -184,9 +185,7 @@ def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
   return ret
 
 def get_transition(proc: SID | STAR| Approach, transition: str):
-  for ident, t_legs in proc.transitions:
-    if ident == transition:
-      return t_legs
+  if transition in proc.transitions: return proc.transitions[transition]
   raise KeyError("Invalid transition. Possible transitions are: " + ",".join([x[0] for x in proc.transitions]))
 
 def leg_file_name(airport: str, info: LegInfo):
@@ -199,7 +198,7 @@ def make_proc_sig(airport: str, proc: str, runway: str | None, transition: str |
 
 def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str | None, transition: str | None, start_alt: int):
   match proc:
-    case SID(_, airport, rwys, legs, _):
+    case SID(_, airport, rwys, _, _):
       if not runway:
         raise ValueError("A runway is required for SIDs.")
       if not runway in rwys:
@@ -208,12 +207,12 @@ def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str 
       start = get_navdata().get_runway_waypoint(airport, "RW" + runway, True)
       start_alt = airport_data.elevation
       
-      legs = proc.legs
-      if transition: legs += get_transition(proc, transition)
+      legs = proc.rwys[runway]
+      if transition: legs = legs + get_transition(proc, transition)
       
       leg_points, _ = build_points(legs, config, start.to_rad(), None, start_alt, True)
       
-    case STAR(_, airport, rwys, legs, _):
+    case STAR(_, airport, rwys, _, _):
       if not runway:
         raise ValueError("A runway is required for STARS.")
       if not runway in rwys:
@@ -221,7 +220,7 @@ def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str 
       
       airport_data = get_navdata().airports[airport]
       
-      legs = proc.legs
+      legs = proc.rwys[runway]
       if transition: legs = get_transition(proc, transition) + legs
       
       leg_points, _ = build_points(legs, config, None, None, start_alt, False)
@@ -254,6 +253,12 @@ def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str 
       
       leg_points = appch_leg_points + map_leg_points
   
-  return build_3d(leg_points)
+  # make the list of required tiles
+  req_tiles: set[tuple[int, int]] = set()
+  for _, ps in leg_points:
+    for p in ps:
+      req_tiles.add((floor(p.lat * 180 / pi), floor(p.lon * 180 / pi)))
+  
+  return (list(req_tiles), build_3d(leg_points))
   
       

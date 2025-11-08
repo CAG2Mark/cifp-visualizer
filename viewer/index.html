@@ -1,18 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>CIFP Visualizer</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				margin: 0px;
-				background-color: #000000;
-				overflow: hidden;
-			}
-		</style>
-        
-        <script type="importmap">
+
+<head>
+    <title>CIFP Visualizer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <link rel="stylesheet" href="style.css">
+
+    <script type="importmap">
         {
             "imports": {
                 "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
@@ -20,9 +17,82 @@
             }
         }
         </script>
-	</head>
-	<body>
-        <script src="script.js" type="module"></script>
-		<div id="render-area"></div>
-	</body>
+</head>
+
+<body>
+    <div id="templates" style="display: none">
+        <div class="proc-container" id="proc-container-template">
+            <div class="proc-header"></div>
+            <div class="proc-rwys"></div>
+            <div class="proc-right-icon">
+                <span class="material-icons"> arrow_forward_ios </span>
+            </div>
+        </div>
+    </div>
+    <div id="ui-container">
+        <div id="sidebar">
+            <div id="sidebar-airport-area" class="hidden">
+                <div class="sidebar-top-area">
+                    <div id="icao-input-grid">
+                        <input id="airport-input" type="text" placeholder="Airport ICAO">
+                        <button id="submit-airport-button" class="round-button button-blue button-no-border">Go</button>
+                    </div>
+                    <hr>
+                    <div id="proc-type-grid">
+                        <span>
+                            <input type="radio" class="header-radio" name="proc-type" value="SID" id="proc-sid"
+                                checked="true">
+                            <label for="proc-sid">SID</label>
+                        </span>
+                        <span>
+                            <input type="radio" class="header-radio" name="proc-type" value="STAR" id="proc-star">
+                            <label for="proc-star">STAR</label>
+                        </span>
+                        <span>
+                            <input type="radio" class="header-radio" name="proc-type" value="Approach"
+                                id="proc-approach">
+                            <label for="proc-approach">Approach</label>
+                        </span>
+                    </div>
+                </div>
+
+                <div id="sidebar-proc-container">
+                    <div class="sidebar-proc-area" id="sidebar-sid-area">
+                    </div>
+                    <div class="sidebar-proc-area hidden" id="sidebar-star-area">
+                    </div>
+                    <div class="sidebar-proc-area hidden" id="sidebar-approach-area">
+                    </div>
+                </div>
+            </div>
+            <div id="sidebar-legs-area">
+                <div class="sidebar-top-area">
+                    <button id="back-button" class="top-button">
+                        <span class="material-icons"> arrow_back </span>
+                        <span>Back to Procedure List</span>
+                    </button>
+                    <div id="legs-header">
+                        <span>VHHH</span> <span>STAR</span> <span>BEKO1Y</span>
+                    </div>
+                    <div id="legs-selections">
+                        <select name="runway" id="runways-selection">
+                            <option>RW18R</option>
+                            <option>RW18L</option>
+                        </select>
+                        <select name="transition" id="transition-selection">
+                            <option>No Transition</option>
+                            <option>LIMES</option>
+                        </select>
+                    </div>
+                    <hr>
+                </div>
+            </div>
+        </div>
+        <div id="render-area"></div>
+    </div>
+
+    <script src="script.js" type="module"></script>
+    <script src="ui.js" type="module"></script>
+</body>
+
 </html>

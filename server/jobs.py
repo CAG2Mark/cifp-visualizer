@@ -52,12 +52,12 @@ class CreateImageJobNew(Job):
     height = min(4096, 1 << (self.zl - 1))
     width = int(height * cos(self.tile.lat * pi / 180))
     
-    url = f"https://tiles.maps.eox.at/wms?service=wms&request=getmap&layers=s2cloudless-2024&srs=EPSG:4326&bbox={x1},{y1},{x2},{y2}&width={width}&height={height}&format=image/png"
+    url = f"https://tiles.maps.eox.at/wms?service=wms&request=getmap&layers=s2cloudless-2024&srs=EPSG:4326&bbox={x1},{y1},{x2},{y2}&width={width}&height={height}&format=image/jpeg"
     print(url)
     r = requests.get(url, stream=True)
     contenttype = r.headers.get("content-type")
     print(contenttype)
-    if contenttype is None or contenttype != "image/png":
+    if contenttype is None or contenttype != "image/jpeg":
       logger.warn(f"Did not get the expected image type when downloading tile {self.tile}. Replacing with a white image.")
       self.copy_default()
     elif r.status_code != 200 and r.status_code != 304:

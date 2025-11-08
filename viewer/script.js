@@ -3,18 +3,32 @@ import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 
 var TO_RAD = Math.PI / 180;
+var EARTH_RADIUS = 3443.9184665;
 
 var camera, scene, renderer;
-var lat = 45, lon = 8;
+var lat = -14, lon = -73;
 var latR = TO_RAD * lat;
 var lonR = TO_RAD * lon;
 var UPDOWN_BOUND = 87 * TO_RAD;
 
-let UP = new THREE.Vector3(
-    Math.cos(latR) * Math.cos(lonR),
-    Math.sin(latR),
-    -Math.cos(latR) * Math.sin(lonR)
-);
+let up;
+
+function updateLatLonRad(newLat, newLon) {
+    lat = newLat / TO_RAD;
+    lon = newLon / TO_RAD;
+    latR = newLat;
+    lonR = newLon;
+    updateUp();
+}
+
+function updateUp() {
+    up = new THREE.Vector3(
+        Math.cos(latR) * Math.cos(lonR),
+        Math.sin(latR),
+        -Math.cos(latR) * Math.sin(lonR)
+    );
+}
+updateUp();
 
 let UP_shifted = new THREE.Vector3(
     Math.cos(latR + 0.1) * Math.cos(lonR + 0.1),
@@ -24,39 +38,42 @@ let UP_shifted = new THREE.Vector3(
 
 // http://localhost:8080/proc/SPZO/approach/R28/SDARK/28/20A.obj
 
-let airport = "LSZA"
+let airport = "SPZO"
 let kind = "approach"
-let ident = "G01"
-let trans = "CALDO"
-let rwy = "01"
+let ident = "R28"
+let trans = "SDARK"
+let rwy = "28"
 
 
-async function load_approach(airport, kind, ident, trans, rwy) {
-    let prefix = `../proc/${airport}/${kind}/${ident}/${trans}`
-    let data = await (await fetch(`../proc/${airport}/${kind}/${ident}/${trans}`)).json()
+async function loadApproach(airport, kind, ident, trans, rwy) {
+    let prefix = `../proc/${airport}/${kind}/${ident}/${trans}/${rwy}`
+    let data = await (await fetch(prefix)).json()
     
     let promises = []
     for (let i = 0; i < data.length; ++i) {
         let leg = data[i]
-        promises.push(load_obj(`${prefix}/${rwy}/${leg["legId"]}.obj`))
+        promises.push(load_obj(`${prefix}/${leg["legId"]}.obj`))
     }
     await Promise.all(promises)
 }
 
-function do_debug() {
-    load_approach(airport, kind, ident, trans, rwy)
+async function do_debug() {
+    let lat = -14;
+    let lon = -73;
+    loadApproach(airport, kind, ident, trans, rwy)
     // await load_obj("../proc/SPZO/approach/R28/SDARK/28/R20.obj")
     // await load_obj("../proc/SPZO/approach/R28/SDARK/28/R22.obj")
-    let a = load_tile(lat, lon, 13);
+    // let a = load_tile(lat, lon, 13);
     // let b = load_tile(lat, lon + 1, 13);
     //let c = load_tile(lat + 1, lon, 13);
     //let d = load_tile(lat + 1, lon + 1, 13);
     //Promise.all([a, b, c, d]);
 
     go_to_tile(lat, lon)
+    submit_icao("VHHH")
 }
 
-let NEGUP = new THREE.Vector3(UP.x, UP.y, UP.z).negate();
+let NEGUP = new THREE.Vector3(up.x, up.y, up.z).negate();
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -93,14 +110,23 @@ async function load_obj(file) {
 }
 
 function go_to_tile(lat, lon) {
-    let pos = new THREE.Vector3(UP.x, UP.y, UP.z);
+    var latR = TO_RAD * lat;
+    var lonR = TO_RAD * lon;
+    
+    let up = new THREE.Vector3(
+        Math.cos(latR) * Math.cos(lonR),
+        Math.sin(latR),
+        -Math.cos(latR) * Math.sin(lonR)
+    );
+    
+    let pos = new THREE.Vector3(up.x, up.y, up.z);
     pos.multiplyScalar(3447);
 
     camera.position.x = pos.x;
     camera.position.y = pos.y;
     camera.position.z = pos.z;
 
-    camera.up = UP;
+    camera.up = up;
 
     cameraHdg = 0; // north
     cameraUpDown = 0;
@@ -111,7 +137,7 @@ function go_to_tile(lat, lon) {
         Math.cos(latR) * Math.sin(lonR),
         0,
         Math.cos(latR) * Math.cos(lonR),
-    ).cross(UP).add(camera.position);
+    ).cross(up).add(camera.position);
 
     camera.lookAt(north);
 }
@@ -119,7 +145,7 @@ function go_to_tile(lat, lon) {
 async function load_tile(lat, lon, zl) {
     // ensure the things that need loading
     // photo URL
-    let photo = `../photo/${lat}/${lon}/${zl}.png`;
+    let photo = `../photo/${lat}/${lon}/${zl}.jpg`;
     let terr = `../terrain/${lat}/${lon}/0.obj`;
 
     let a = ensure_url(photo);
@@ -139,7 +165,7 @@ async function load_tile(lat, lon, zl) {
             loader.load(
                 terr,
                 function (object) {
-                    var texture = new THREE.TextureLoader().load(`../photo/${lat}/${lon}/${zl}.png`);
+                    var texture = new THREE.TextureLoader().load(photo);
 
                     object.traverse(function (child) {   // aka setTexture
                         if (child instanceof THREE.Mesh) {
@@ -200,16 +226,13 @@ function init() {
 
     renderer = new THREE.WebGLRenderer();
 
-    // set the background color to gray
-    renderer.setClearColor(0xa0a0a0);
+    renderer.setClearColor(0x86cdfa);
 
     let renderArea = document.getElementById("render-area");
 
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderArea.appendChild(renderer.domElement);
-
-    //
 
     window.addEventListener('resize', onWindowResize, false);
     renderer.domElement.addEventListener('mousedown', (e) => {
@@ -302,11 +325,12 @@ function init() {
 }
 
 function onWindowResize() {
-
-    camera.aspect = window.innerWidth / window.innerHeight;
+    let box = document.getElementById("render-area").getBoundingClientRect();
+    
+    camera.aspect = box.width / box.height;
     camera.updateProjectionMatrix();
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(box.width, box.height);
 
 }
 
@@ -359,7 +383,7 @@ function animate() {
 
     let a = new THREE.Vector3();
     camera.getWorldDirection(a);
-    let c = new THREE.Vector3(UP.x, UP.y, UP.z)
+    let c = new THREE.Vector3(up.x, up.y, up.z);
     let b = new THREE.Vector3();
     b.crossVectors(a, c).normalize();
 
@@ -374,6 +398,17 @@ function animate() {
     a.multiplyScalar(timeFactor);
 
     camera.position.add(a);
+    
+    let cameraPos = new THREE.Vector3();
+    cameraPos.copy(camera.position);
+    
+    let norm = Math.sqrt(cameraPos.dot(cameraPos));
+    
+    let newLat = Math.asin(cameraPos.y / norm);
+    let newLon = -Math.atan2(cameraPos.z, cameraPos.x);
+    
+    updateLatLonRad(newLat, newLon);
+    camera.up = up;
 
     if (isMouseDown) {
         // create an orthonormal frame
@@ -385,7 +420,7 @@ function animate() {
         ).normalize();
 
         let north = new THREE.Vector3();
-        north.crossVectors(UP, east);
+        north.crossVectors(up, east);
 
         let eastCopy = new THREE.Vector3();
         eastCopy.copy(east);
@@ -396,15 +431,13 @@ function animate() {
 
         // combine with up/down angle
         let upCopy = new THREE.Vector3(
-            UP.x, UP.y, UP.z
+            up.x, up.y, up.z
         ).multiplyScalar(Math.sin(cameraUpDown));
 
         // combine with up/down angle
         forward
             .multiplyScalar(Math.cos(cameraUpDown))
             .add(upCopy)
-
-        console.log(cameraHdg, cameraUpDown);
 
         forward.add(camera.position);
 
@@ -413,3 +446,142 @@ function animate() {
 
     renderer.render(scene, camera);
 }
+
+var icaoBtn = document.getElementById("submit-airport-button");
+var icaoInput = document.getElementById("airport-input")
+icaoBtn.addEventListener("click", on_icao_submit);
+
+var procTemplate = document.getElementById("proc-container-template");
+procTemplate.attributes.removeNamedItem("id");
+
+document.getElementById("templates").remove();
+
+var sidsArea = document.getElementById("sidebar-sid-area");
+var starArea = document.getElementById("sidebar-star-area");
+var appchArea = document.getElementById("sidebar-approach-area");
+
+function populateChild(node, name, value) {
+    node.getElementsByClassName(name)[0].textContent = value;
+}
+
+function rwy_str(data) {
+    if (data["isAllRwys"]) {
+        return "All Runways";
+    }
+    if (data.hasOwnProperty("runway")) {
+        if (data["runway"]) {
+            return "RW" + data["runway"];
+        }
+        return "Circle to Land";
+    }
+    let str = "RW";
+    let rwys = data["runways"];
+    for (let i = 0; i < rwys.length; ++i) {
+        if (i > 0) str += ", ";
+        str += rwys[i];
+    }
+    return str;
+}
+
+function firstRwy(data) {
+    if (data.hasOwnProperty("runway") && data["runway"]) {
+        if (data["runway"]) {
+            return "RW" + data["runway"];
+        } else {
+            return "none"
+        }
+    }
+    
+    let rwys = data["runways"];
+    if (rwys.length > 0) return rwys[0];
+    return "none";
+}
+
+var curProc;
+var curAirport;
+var curRwy;
+var curTrans;
+
+async function loadProc(proc) {
+    curTrans = "none";
+    curRwy = firstRwy(proc);
+    
+    curProc = proc;
+    let airport = curAirport;
+    let kind = proc["kind"];
+    let ident = proc["id"];
+    let trans = curTrans;
+    let rwy = curRwy;
+    let data = await (await fetch(`../proc/${airport}/${kind}/${ident}/${trans}/${rwy}`)).json()
+    console.log(data);
+}
+
+function registerProcClickListener(node, proc) {
+    node.addEventListener("click", () => loadProc(proc));
+}
+
+function populateAirportData(data) {
+    sidsArea.replaceChildren([]);
+    starArea.replaceChildren([]);
+    appchArea.replaceChildren([]);
+    
+    let sids = data["sids"];
+    for (let i = 0; i < sids.length; ++i) {
+        let proc = sids[i];
+        let node = procTemplate.cloneNode(true);
+        populateChild(node, "proc-header", proc["id"]);
+        populateChild(node, "proc-rwys", rwy_str(proc));
+        registerProcClickListener(node, proc);
+        sidsArea.appendChild(node);
+    }
+    
+    let stars = data["stars"];
+    for (let i = 0; i < stars.length; ++i) {
+        let proc = stars[i];
+        let node = procTemplate.cloneNode(true);
+        populateChild(node, "proc-header", proc["id"]);
+        populateChild(node, "proc-rwys", rwy_str(proc));
+        registerProcClickListener(node, proc);
+        starArea.appendChild(node);
+    }
+    
+    let appches = data["approaches"];
+    for (let i = 0; i < appches.length; ++i) {
+        let proc = appches[i];
+        let node = procTemplate.cloneNode(true);
+        populateChild(node, "proc-header", proc["id"]);
+        populateChild(node, "proc-rwys", rwy_str(proc));
+        registerProcClickListener(node, proc);
+        appchArea.appendChild(node);
+    }
+}
+
+let submitLock = false;
+
+async function submit_icao(val) {
+    curAirport = val;
+    
+    val = val.trim().toUpperCase();
+    let res = await fetch("../airport/" + val);
+    if (res.status == 404) {
+        alert("Airport " + val + " not found.");
+        submitLock = false;
+        return;
+    }
+    let data = await res.json();
+    populateAirportData(data);
+    submitLock = false;
+}
+
+async function on_icao_submit() {
+    if (submitLock) return;
+    submitLock = true;
+    let val = icaoInput.value.toUpperCase();
+    await submit_icao(val);
+}
+
+icaoInput.addEventListener("keyup", e => {
+    if (!submitLock && e.key == "Enter") {
+        on_icao_submit();
+    }
+})

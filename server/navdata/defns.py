@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from math import pi
+from collections import OrderedDict
 
 @dataclass
 class AircraftConfig:
@@ -238,7 +239,7 @@ class FixToAltitude(Leg):
   rcmd: RadialDME
   
   def fix_name(self) -> str:
-    return f"({self.alt})"
+    return f"({self.alt}ft)"
   
   def human_name(self) -> str:
     return "Fix to altitude"
@@ -281,7 +282,7 @@ class FixToManual(Leg):
   rcmd: RadialDME
   
   def fix_name(self) -> str:
-    return "(Manual)"
+    return ""
   
   def human_name(self) -> str:
     return "Fix to manual"
@@ -294,7 +295,7 @@ class CourseToAlt(Leg):
   alt: int
   
   def fix_name(self) -> str:
-    return f"({self.alt})"
+    return f"({self.alt}ft)"
   
   def human_name(self) -> str:
     return "Course to altitude" 
@@ -375,7 +376,7 @@ class HeadingToAlt(Leg):
   alt: int
   
   def fix_name(self) -> str:
-    return f"({self.alt})"
+    return f"({self.alt}ft)"
   
   def human_name(self) -> str:
     return "Heading to altitude"
@@ -416,7 +417,7 @@ class HeadingToManual(Leg):
   heading: Course
   
   def fix_name(self) -> str:
-    return "(Manual)"
+    return ""
 
   def human_name(self) -> str:
     return "Heading to manual"
@@ -509,22 +510,22 @@ class AirportInfo:
 class SID:
   ident: str
   airport: str
-  rwys: list[str] = field(default_factory=list)
-  legs: list[Leg] = field(default_factory=list)
-  transitions: list[tuple[str, list[Leg]]] = field(default_factory=list)
+  rwys: dict[str, list[Leg]] = field(default_factory=OrderedDict)
+  is_all_rwys: bool = False
+  transitions: dict[str, list[Leg]] = field(default_factory=OrderedDict)
 
 @dataclass
 class STAR:
   ident: str
   airport: str
-  rwys: list[str] = field(default_factory=list)
-  transitions: list[tuple[str, list[Leg]]] = field(default_factory=list)
-  legs: list[Leg] = field(default_factory=list)
+  rwys: dict[str, list[Leg]] = field(default_factory=OrderedDict)
+  is_all_rwys: bool = False
+  transitions: dict[str, list[Leg]] = field(default_factory=OrderedDict)
 
 @dataclass
 class Approach:
   ident: str
   airport: str
   rwy: str | None = None
-  transitions: list[tuple[str, list[Leg]]] = field(default_factory=list)
+  transitions: dict[str, list[Leg]] = field(default_factory=OrderedDict)
   legs: list[Leg] = field(default_factory=list)

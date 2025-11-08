@@ -142,7 +142,7 @@ def build_points(
     return last_point().latlon()
   
   def to_fix_track(leg: Leg, start: Waypoint, crs: float) -> list[PathPoint]:
-    def giveup():
+    def giveup() -> list[PathPoint]:
       if not overfly: return []
       # give up: just take the shortest route to the radial
       p = point_bisect_line(cur_latlon(), start.to_rad(), crs)
@@ -519,7 +519,7 @@ def build_points(
           cur_course = new_p[-1].course
         overfly = info.overfly
         
-      case ProcTurn(info, fix, alt, course, max_dist):
+      case ProcTurn(info, fix, alt, course, _):
         raise NotImplementedError()
         pass
 

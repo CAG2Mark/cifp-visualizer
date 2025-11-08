@@ -5,10 +5,11 @@ from secrets import randbelow
 from threading import Lock
 from server.jobs import *
 import re
-from server.navdata.defns import AircraftConfig
+from server.navdata.defns import *
 from server.navdata.loader import NavDatabase
 import server.navdata.builder as builder
 import json
+from urllib.parse import urlparse
 
 hostName = "0.0.0.0"
 serverPort = 8080
@@ -30,6 +31,8 @@ def get_file_bytes(filename: str):
   if os.path.exists(filename):
     with open(filename, "br") as f:
       return f.read()
+  else:
+    raise FileNotFoundError()
 
 class CIFPServer(BaseHTTPRequestHandler):
   
@@ -77,11 +80,19 @@ class CIFPServer(BaseHTTPRequestHandler):
       return
 
     path = "viewer/" + "/".join(values)
+    
+    is_bytes = False
     if os.path.exists(path):
       if values[-1].endswith(".html"):
         ct = "text/html"
       elif values[-1].endswith(".css"):
         ct = "text/css"
+      elif values[-1].endswith(".woff"):
+        ct = "application/font-woff"
+        is_bytes = True
+      elif values[-1].endswith(".woff2"):
+        ct = "application/font-woff2"
+        is_bytes = True
       elif values[-1].endswith(".js"):
         ct = "text/javascript"
       elif values[-1].endswith(".mtl"):
@@ -91,9 +102,13 @@ class CIFPServer(BaseHTTPRequestHandler):
       else:
         self.send_404()
         return
-          
-      with open(path) as f:
-        content = bytes(f.read(), encoding="UTF-8")
+      
+      if is_bytes:
+        content = get_file_bytes(path)
+      else:
+        with open(path) as f:
+          content = bytes(f.read(), encoding="UTF-8")
+      
       self.send_response(200)
       self.send_header("Content-type", ct)
       self.end_headers()
@@ -103,8 +118,8 @@ class CIFPServer(BaseHTTPRequestHandler):
       return
   
   def handle_photos(self, values: list[str]):
-    if len(values) != 3 or not values[-1].endswith(".png"):
-      self.send_malformed("Incorrect format. Expected: photo/lat/lon/zl.png")
+    if len(values) != 3 or not values[-1].endswith(".jpg"):
+      self.send_malformed("Incorrect format. Expected: photo/lat/lon/zl.jpg")
       return
     lat, lon, zl = values
     zl = zl[:-4]
@@ -113,7 +128,7 @@ class CIFPServer(BaseHTTPRequestHandler):
       lon = int(lon)
       zl = int(zl)
     except:
-      self.send_malformed("Incorrect format. Expected: photo/lat/lon/zl.png")
+      self.send_malformed("Incorrect format. Expected: photo/lat/lon/zl.jpg")
       return
     if not validate_tile(lat, lon):
       self.send_malformed("Latitude and longitude out of range.")
@@ -125,7 +140,7 @@ class CIFPServer(BaseHTTPRequestHandler):
     # NOTE: we MUST check if the job exists first
     # the file could exist but the job could still be running!
     
-    path = f"cache/tileimg/Z{zl}-{lat}-{lon}.png"
+    path = f"cache/tileimg/Z{zl}-{lat}-{lon}.jpg"
     with self.img_jobs_lock:
       working = path in self.img_jobs
       if working: cur_job = self.img_jobs[path]
@@ -136,7 +151,7 @@ class CIFPServer(BaseHTTPRequestHandler):
       self.end_headers()
       self.wfile.write(bytes(cur_job.progress(), "UTF-8"))
     elif not os.path.exists(path):
-      logger.info(f"Dispatching job to create image {lat}/{lon}/{zl}.png.")
+      logger.info(f"Dispatching job to create image {lat}/{lon}/{zl}.jpg.")
       # create job
       job = CreateImageJobNew(self.img_job_done, tiler.Tile(lat, lon), zl, path)
       self.img_jobs[path] = job
@@ -149,7 +164,7 @@ class CIFPServer(BaseHTTPRequestHandler):
     else:
       content = get_file_bytes(path)
       self.send_response(200)
-      self.send_header("Content-type", "image/png")
+      self.send_header("Content-type", "image/jpeg")
       self.end_headers()
       self.wfile.write(content)
   
@@ -249,33 +264,38 @@ class CIFPServer(BaseHTTPRequestHandler):
     sids, stars, appches = data
     
     ret = {}
-    sids_dict = {}
-    stars_dict = {}
-    appches_dict = {}
+    sids_list = []
+    stars_list = []
+    appches_list = []
     
-    ret["sids"] = sids_dict
+    ret["sids"] = sids_list
     for ident, sid in sids.items():
       data = {}
       data["id"] = ident
-      data["runways"] = sid.rwys
-      data["transitions"] = [x[0] for x in sid.transitions]
-      sids_dict[ident] = data
+      data["kind"] = "sid"
+      data["runways"] = list(sid.rwys.keys())
+      data["isAllRwys"] = sid.is_all_rwys
+      data["transitions"] = list(sid.transitions.keys())
+      sids_list.append(data)
     
-    ret["stars"] = stars_dict
+    ret["stars"] = stars_list
     for ident, star in stars.items():
       data = {}
       data["id"] = ident
-      data["runways"] = star.rwys
-      data["transitions"] = [x[0] for x in star.transitions]
-      stars_dict[ident] = data
+      data["kind"] = "star"
+      data["runways"] = list(star.rwys.keys())
+      data["isAllRwys"] = star.is_all_rwys
+      data["transitions"] = list(star.transitions.keys())
+      stars_list.append(data)
     
-    ret["approaches"] = appches_dict
+    ret["approaches"] = appches_list
     for ident, appch in appches.items():
       data = {}
       data["id"] = ident
+      data["kind"] = "approach"
       data["runway"] = appch.rwy
-      data["transitions"] = [x[0] for x in appch.transitions]
-      appches_dict[ident] = data
+      data["transitions"] = list(appch.transitions.keys())
+      appches_list.append(data)
     
     payload = json.dumps(ret)
     self.send_response(200)
@@ -288,13 +308,12 @@ class CIFPServer(BaseHTTPRequestHandler):
   proc_cache_lock = Lock()
   
   def handle_proc(self, values: list[str]):
-    if len(values) != 4 and len(values) != 6:
+    if len(values) != 5 and len(values) != 6:
       return self.send_malformed(
-        "Usage: proc/ICAO/<sid,star,approach>/ident/<transition,\"none\"> or proc/ICAO/<sid,star,approach>/ident/<transition,\"none\">/<runway,\"none\">/legId.obj")
+        "Usage: proc/ICAO/<sid,star,approach>/ident/<transition,\"none\">/<runway, \"none\"> or proc/ICAO/<sid,star,approach>/ident/<transition,\"none\">/<runway,\"none\">/legId.obj")
     
-    if len(values) == 4:
-      airport_nme, proc_type, ident, transition = values
-      runway = None
+    if len(values) == 5:
+      airport_nme, proc_type, ident, transition, runway = values
       seq = None
     else:
       airport_nme, proc_type, ident, transition, runway, seq = values
@@ -321,17 +340,22 @@ class CIFPServer(BaseHTTPRequestHandler):
     proc = data[ident]
 
     if seq is None:
-      legs = proc.legs
+      legs: list[Leg]
+      
+      match proc:
+        case SID(_, _, rwys, _) | STAR(_, _, rwys, _):
+          if not runway in rwys:
+            self.send_404()
+            return
+          legs = rwys[runway]
+        case Approach(_, _, _, _, l): legs = l
+
       if transition != "none":
-        legs_ = None
-        for id, t_legs in proc.transitions:
-          if id == transition:
-            legs_ = t_legs
-            break
-        if legs_ is None:
+        if not transition in proc.transitions:
           self.send_404()
           return
-        
+        legs_ = proc.transitions[transition]
+
         if proc_type == "sid":
           legs = legs + legs_
         else:
@@ -371,9 +395,16 @@ class CIFPServer(BaseHTTPRequestHandler):
         
         def serve_file():
           content = get_file_bytes(filepath)
+          
           self.send_response(200)
-          self.send_header("Content-type", "model/obj")
-          # self.send_header("Content-Encoding", "gzip")
+          if seq.endswith(".json"):
+            self.send_header("Content-type", "application/json")
+          elif seq.endswith(".obj"):
+            self.send_header("Content-type", "model/obj")
+          else:
+            self.send_404()
+            return
+          
           self.end_headers()
           self.wfile.write(content)
           return
@@ -385,7 +416,7 @@ class CIFPServer(BaseHTTPRequestHandler):
           return
         
         try:
-          objs = builder.build_proc(proc, AircraftConfig(), runway, transition, altitude)
+          req_tiles, objs = builder.build_proc(proc, AircraftConfig(), runway, transition, altitude)
         except ValueError as e:
           self.send_malformed(e.args[0])
           return
@@ -400,6 +431,8 @@ class CIFPServer(BaseHTTPRequestHandler):
         for l, obj in objs:
           filename = f"cache/flightpaths/{proc_sig}_{l.info.qual}{l.info.seq}.obj"
           obj.export_obj(filename)
+        with open(f"cache/flightpaths/{proc_sig}_tiles.json", "w") as f:
+          f.write(json.dumps(req_tiles))
         
         self.proc_cache_info[proc_sig] = altitude
       
@@ -417,7 +450,9 @@ class CIFPServer(BaseHTTPRequestHandler):
     return
   
   def do_GET(self):
-    values = self.path.split("/")[1:]
+    parsed = urlparse(self.path)
+    # spl = self.path.split("?")
+    values = parsed.path.split("/")[1:]
     
     if ".." in values:
       self.send_malformed()
