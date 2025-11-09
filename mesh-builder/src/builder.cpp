@@ -87,6 +87,7 @@ class HgtData {
 private:
     void load(const string &nme) {
         ok = load_data(data, size, nme) == 0;
+        if (!ok) size = 1201;
     }
 public:
     size_t size;
@@ -96,7 +97,7 @@ public:
         this->load(nme);
     }
     ~HgtData() {
-        delete[] data;
+        if (ok) delete[] data;
     }
     
     int16_t get_data(size_t row, size_t col) const {
@@ -308,7 +309,7 @@ void make_mesh(const string &nme, const string &filename, double llat, double ul
     
     export_obj(points, size, filename);
     
-    delete[] points;
+    delete points;
 }
 
 int main(int argc, char *argv[]) {

@@ -87,7 +87,7 @@ class CreateImageJobNew(Job):
   def progress(self):
     with self.prog_lock:
       prog = int(self.dl_progress * 100)
-    return f"Downloading images for tile {self.tile.lat}, {self.tile.lon} at zoom level {self.zl}... ({prog}%)"
+    return f"Downloading images for tile {self.tile.lat}, {self.tile.lon}... ({prog}%)"
   
   def perform(self):
     t = Thread(target = self.task)
@@ -155,10 +155,9 @@ class DownloadDemJob(Job):
     t.start()
 
 class MakeMeshJob(Job):
-  def __init__(self, callback, tile: tiler.Tile, lod, path) -> None:
+  def __init__(self, callback, tile: tiler.Tile, path) -> None:
     super().__init__(callback)
     self.tile = tile
-    self.lod = lod
     self.filename = tiler.get_vfp_file(tile).split("/")[-1] # zip file name
     self.path = path # .obj.gz name
     self.status = 0
@@ -203,7 +202,7 @@ class MakeMeshJob(Job):
     if self.status == 0:
       return f"Extracting DEM for tile {self.tile.lat}, {self.tile.lon}..."
     elif self.status == 1:
-      return f"Making mesh for tile {self.tile.lat}, {self.tile.lon} at LOD {self.lod}..."
+      return f"Making mesh for tile {self.tile.lat}, {self.tile.lon}..."
   
   def perform(self):
     t = Thread(target = self.task)

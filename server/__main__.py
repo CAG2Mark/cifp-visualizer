@@ -98,7 +98,7 @@ else:
     print(sid.rwys)
     start = data.get_runway_waypoint(airport_, "RW" + rwy, True)
     
-    leg_points, all_points = point_builder.build_points(legs, ac_cfg, start.to_rad(), -1, 28, True)
+    # leg_points, all_points = point_builder.build_points(legs, ac_cfg, start.to_rad(), -1, 28, True)
     
     def plot_points():
       import pylab as pl

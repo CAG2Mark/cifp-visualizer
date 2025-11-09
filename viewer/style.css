@@ -20,6 +20,8 @@
     padding: 8px 4px;
 
     transition: 200ms background-color;
+    
+    user-select: none;
 }
 
 .top-button:hover {
@@ -56,6 +58,9 @@
     position: relative;
 
     user-select: none;
+    
+    cursor: pointer;
+    text-decoration: none;
 }
 
 .round-button:disabled {
@@ -66,11 +71,11 @@
 }
 
 .round-button:hover {
-    background-color: #ffffff09;
+    background-color: #00000013;
 }
 
 .round-button:active {
-    background-color: #ffffff14;
+    background-color: #00000023;
 }
 
 
@@ -99,16 +104,21 @@ body {
 }
 
 #ui-container {
-    display: grid;
+    position: relative;
+    display: flex;
     grid-template-columns: 350px auto;
     width: 100vw;
     height: 100vh;
+    z-index: 0;
 }
 
 #sidebar {
     position: relative;
     background-color: #dcdcdc;
     height: 100vh;
+    border-width: 0px 1px 0px 0px;
+    border-style: solid;
+    border-color: #afafaf;
 }
 
 #sidebar-airport-area {
@@ -144,7 +154,7 @@ input[type=text] {
     transition: border-color 100ms ease;
     border-radius: var(--textarea-radius);
     border-style: solid;
-    border-color: #00000022;
+    border-color: #00000013;
     border-width: 2px;
 
     padding: 8px;
@@ -159,7 +169,7 @@ input[type=text] {
 }
 
 input[type=text]:hover {
-    border-color: #00000049;
+    border-color: #00000033;
 }
 
 input[type=text]:focus {
@@ -238,7 +248,7 @@ hr {
 
 .proc-header {
     font-weight: bold;
-    font-size: 24px;
+    font-size: 22px;
     color: #282828;
 }
 
@@ -254,12 +264,12 @@ hr {
     color: #747474;
 }
 
-#sidebar-proc-container {
+.sidebar-proc-container {
     overflow-y: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
-#sidebar-proc-container::-webkit-scrollbar { 
+.sidebar-proc-container::-webkit-scrollbar { 
     display: none;
 }
 
@@ -275,12 +285,18 @@ hr {
     font-size: 24px;
     color: #282828;
     margin-bottom: 8px;
+    user-select: none;
+    margin-left: 8px;
 }
 
 #back-button {
-    margin-left: -6px;
+    margin-left: 2px;
     margin-top: -6px;
     margin-bottom: 4px;
+}
+
+#legs-selections {
+    user-select: none;
 }
 
 select {
@@ -289,12 +305,12 @@ select {
     
     resize: none;
     color: #111111;
-    background-color: #00000016;
+    background-color: transparent;
 
-    transition: border-color 100ms ease;
+    transition: background-color 100ms ease;
     border-radius: var(--textarea-radius);
     border-style: solid;
-    border-color: #00000022;
+    border-color: transparent;
     border-width: 2px;
 
     padding: 4px;
@@ -302,8 +318,188 @@ select {
     box-sizing: border-box;
 
     outline: none;
+    
+    user-select: none;
 }
 
-select:hover {
-    border-color: #00000049;
+select:not([disabled]):hover {
+    background-color: #0000000f;
+}
+
+select:not([disabled]):open {
+    background-color: #00000020;
+}
+
+.leg-radio {
+    display: none;
+}
+
+.leg-radio + label {
+    width: calc(100% - 8px);
+    display: inline-block;
+    background-color: transparent;
+    transition: 200ms background-color;
+    padding: 8px 4px;
+    border-radius: 6px;
+    
+    cursor: pointer;
+}
+
+.leg-radio + label:hover {
+    background-color: #00000008;
+}
+
+.leg-radio:checked + label {
+    background-color: #0000000f !important;
+}
+
+.leg-container {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 0 4px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.leg-container * {
+    user-select: none;
+}
+
+.proc-container:hover {
+    background-color: #00000012;
+}
+
+.leg-type {
+    font-weight: bold;
+}
+
+.leg-fix {
+    font-weight: bold;
+    text-align: right;
+}
+
+.leg-restr {
+    color: #555555;
+    grid-row: 2;
+    grid-column: 1 / span 2;
+}
+
+.legs-missed-approach {
+    padding: 8px;
+    color: #616161;
+    user-select: none;
+    font-weight: 500;
+    font-style: italic;
+}
+
+#render-area {
+    position: relative;
+}
+
+#render-area > canvas {
+    position: relative;
+    z-index: 0;
+}
+
+#job-area {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    width: 450px;
+    min-height: 40px;
+    background-color: #dcdcdc;
+    z-index: 1;
+    border-radius: 12px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #afafaf;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+#job-area * {
+    user-select: none;
+}
+
+.job-container:not(:last-child) {
+    margin-bottom: 8px;
+}
+
+.job-container {
+    padding: 8px;
+    background-color: #00000013;
+    border-radius: 8px;
+    font-style: italic;
+    color: #333333;
+}
+
+#info-area {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: #dcdcdc;
+    z-index: 1;
+    border-radius: 12px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #afafaf;
+    padding: 0px 0px -0px 0px;
+    box-sizing: border-box;
+    
+    opacity: 0.8;
+}
+
+#info-area > .round-button {
+    padding: 7px 8px 8px 8px !important;
+}
+
+#popup-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    background-color: #00000090;
+}
+
+.popup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #dcdcdc;
+    z-index: 1;
+    border-radius: 12px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #afafaf;
+    padding: 0px 0px -0px 0px;
+    box-sizing: border-box;
+}
+
+#license-popup {
+    width: 600px;
+    min-height: 300px;
+    
+    padding: 16px;
+}
+
+#close-license-button {
+    float: right;
+}
+
+#invalid-airport-popup {
+    width: 300px;
+    
+    padding: 16px;
+}
+
+#close-invalid-button {
+    float: right;
+    margin-top: 4px;
 }

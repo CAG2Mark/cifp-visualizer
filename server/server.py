@@ -11,6 +11,8 @@ import server.navdata.builder as builder
 import json
 from urllib.parse import urlparse
 
+from server.navdata.mathhelpers import to_xyz_earth
+
 hostName = "0.0.0.0"
 serverPort = 8080
 
@@ -169,23 +171,19 @@ class CIFPServer(BaseHTTPRequestHandler):
       self.wfile.write(content)
   
   def handle_terrain(self, values: list[str]):
-    if len(values) != 3 or not values[-1].endswith(".obj"):
-      self.send_malformed("Incorrect format. Expected: terain/lat/lon/lod.obj")
+    if len(values) != 2 or not values[-1].endswith(".obj"):
+      self.send_malformed("Incorrect format. Expected: terain/lat/lon.obj")
       return
-    lat, lon, lod = values
-    lod = lod[:-4]
+    lat, lon = values
+    lon = lon.split(".")[0]
     try:
       lat = int(lat)
       lon = int(lon)
-      lod = int(lod)
     except:
-      self.send_malformed("Incorrect format. Expected: terain/lat/lon/lod.zip")
+      self.send_malformed("Incorrect format. Expected: terain/lat/lon.obj")
       return
     if not validate_tile(lat, lon):
       self.send_malformed("Latitude and longitude out of range.")
-      return
-    if not 0 <= lod <= 1:
-      self.send_malformed("LOD must be between 0 and 1.")
       return
     
     # NOTE: we MUST check if the job exists first
@@ -231,9 +229,9 @@ class CIFPServer(BaseHTTPRequestHandler):
       self.wfile.write(bytes(cur_job.progress(), "UTF-8"))
       return
     elif not os.path.exists(path):
-      logger.info(f"Dispatching job to create {path}.obj")
+      logger.info(f"Dispatching job to create {path}")
       # create job
-      job = MakeMeshJob(self.terr_job_done, tiler.Tile(lat, lon), lod,  path)
+      job = MakeMeshJob(self.terr_job_done, tiler.Tile(lat, lon), path)
       self.terr_jobs[path] = job
       job.perform()
       
@@ -314,9 +312,9 @@ class CIFPServer(BaseHTTPRequestHandler):
     
     if len(values) == 5:
       airport_nme, proc_type, ident, transition, runway = values
-      seq = None
+      fileName = None
     else:
-      airport_nme, proc_type, ident, transition, runway, seq = values
+      airport_nme, proc_type, ident, transition, runway, fileName = values
     
     airport = navdata.get_airport_data(airport_nme)
     if airport is None:
@@ -339,7 +337,7 @@ class CIFPServer(BaseHTTPRequestHandler):
     
     proc = data[ident]
 
-    if seq is None:
+    if fileName is None:
       legs: list[Leg]
       
       match proc:
@@ -363,9 +361,11 @@ class CIFPServer(BaseHTTPRequestHandler):
       ret = []
       for l in legs:
         data = {}
-        data["kind"] = l.human_name()
+        data["kind"] = l.title()
         data["fix"] = l.fix_name()
         data["legId"] = l.info.qual + str(l.info.seq)
+        data["fmap"] = l.info.fmap
+        data["faf"] = l.info.faf
         alt_restr = l.info.alt.pretty_print() if l.info.alt else None
         if alt_restr:
           data["altitude"] = alt_restr
@@ -388,18 +388,22 @@ class CIFPServer(BaseHTTPRequestHandler):
         if transition == "none": transition = None
         
         proc_sig = builder.make_proc_sig(airport_nme, ident, runway, transition)
-          
+        
         altitude = 10000 # todo
         
-        filepath = f"cache/flightpaths/{proc_sig}_{seq}"
+        filepath = f"cache/flightpaths/{proc_sig}_{fileName}"
         
         def serve_file():
-          content = get_file_bytes(filepath)
+          if not os.path.exists(filepath):
+            logger.warn(f"Tried to serve file {filepath} but it does not exist. Sending an empty file.")
+            content = bytes("", encoding="UTF-8")
+          else:
+            content = get_file_bytes(filepath)
           
           self.send_response(200)
-          if seq.endswith(".json"):
+          if fileName.endswith(".json"):
             self.send_header("Content-type", "application/json")
-          elif seq.endswith(".obj"):
+          elif fileName.endswith(".obj"):
             self.send_header("Content-type", "model/obj")
           else:
             self.send_404()
@@ -416,7 +420,8 @@ class CIFPServer(BaseHTTPRequestHandler):
           return
         
         try:
-          req_tiles, objs = builder.build_proc(proc, AircraftConfig(), runway, transition, altitude)
+          ret = builder.build_proc(proc, AircraftConfig(), runway, transition, altitude)
+          req_tiles, objs, initial = ret.tiles, ret.objects, ret.initial_point
         except ValueError as e:
           self.send_malformed(e.args[0])
           return
@@ -427,12 +432,26 @@ class CIFPServer(BaseHTTPRequestHandler):
         if not os.path.exists("cache"):
           os.mkdir("cache")
         if not os.path.exists("cache/flightpaths"):
-          os.mkdir("flightpaths")
-        for l, obj in objs:
+          os.mkdir("cache/flightpaths")
+        for l, obj, _ in objs:
           filename = f"cache/flightpaths/{proc_sig}_{l.info.qual}{l.info.seq}.obj"
-          obj.export_obj(filename)
+          obj.export_obj(filename, "Path")
         with open(f"cache/flightpaths/{proc_sig}_tiles.json", "w") as f:
           f.write(json.dumps(req_tiles))
+        points = {}
+        points["initialLatLon"] = (initial.lat * 180 / pi, initial.lon * 180 / pi)
+        points["initialAlt"] = initial.altitude
+        legPointsList = []
+        points["legPoints"] = legPointsList
+        for l, _, point in objs:
+          cur = {}
+          cur["legId"] = l.info.qual + str(l.info.seq)
+          xyz = to_xyz_earth(*point.latlon(), point.altitude)
+          cur["latLon"] = (point.lat * 180 / pi, point.lon * 180 / pi)
+          cur["xyz"] = (xyz.x, xyz.y, xyz.z)
+          legPointsList.append(cur)
+        with open(f"cache/flightpaths/{proc_sig}_points.json", "w") as f:
+          f.write(json.dumps(points))
         
         self.proc_cache_info[proc_sig] = altitude
       

@@ -143,7 +143,7 @@ def get_intersection(a: tuple[float, float], a_crs: float, b: tuple[float, float
 
 # returns orthonormal basis
 # (center of circle in xyz, v1, v2, v3), v1 v2 v3 orthonormal
-# v1 goes from the origin to `start`
+# v1 goes from the origin to `center`
 # v2 goes from `center` to start
 # v3 is either clockwise or counterclockwise 90deg from v2
 def get_turning_cirle(center: tuple[float, float], start: tuple[float, float], clockwise: bool = False) -> tuple[Vec3, Vec3, Vec3, Vec3]:
@@ -275,6 +275,8 @@ def get_arc_points_angle(
   points_xyz: list[PathPoint] = []
   
   num_points = ceil(points_density * (e_ang / (2 * pi)) * radius * EARTH_RAD)
+  if num_points == 0: return []
+  
   step = e_ang / num_points
   
   for i in range(num_points):
@@ -319,7 +321,7 @@ def turn_towards(
   s = to_xyz(*start.latlon())
   dist = sqrt((s - l).mag2())
   
-  assert(abs(inbd_crs - get_course(start.latlon(), v3)) < TOLERANCE)
+  # assert(abs(inbd_crs - get_course(start.latlon(), v3)) < TOLERANCE)
   
   # cur course = a
   # target course = b

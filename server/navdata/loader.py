@@ -483,7 +483,7 @@ class NavDatabase:
   def extract_rwy(self, proc: str) -> str | None:
     if not proc[1:3].isnumeric(): return None
     if len(proc) <= 3 or proc[3] == "-": return proc[1:3]
-    else: return proc[1:3].replace("0", "") + proc[3]
+    else: return proc[1:3] + proc[3]
   
   def sort_data(self, procedures: dict[tuple[ProcKind, str, str, str], list[Leg]], airport: str):
     sids: dict[str, SID] = querydict.QueryDict(lambda x: SID(x, airport))

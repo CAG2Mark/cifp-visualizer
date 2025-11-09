@@ -12,8 +12,9 @@ class Object3D:
   vertices: list[Vec3]
   polygons: list[list[int]]
   
-  def export_obj(self, file: str):
+  def export_obj(self, file: str, material: str | None = None):
     with open(file, "w") as f:
+      if material: f.write(f"usemtl {material}\n")
       for v in self.vertices:
         f.write("v ")
         f.write("{:.5f} ".format(v.x))
@@ -108,7 +109,8 @@ def make_section_obj(prev_sec: SectionObject | None, p1: Vec3, p2: Vec3) -> Sect
     
 
 def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
-  objs: list[tuple[Leg, tuple[list[SectionObject], Rect3D | None]]] = []
+  # leg, (sections, previous leg's end rectangle, current leg's end point)
+  objs: list[tuple[Leg, tuple[list[SectionObject], Rect3D | None, PathPoint]]] = []
   
   prev: PathPoint | None = None
   for leg, points in leg_points:
@@ -138,8 +140,10 @@ def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
       
       prev = p
     
+    assert prev
+    end_pt = points[-1] if points else prev
     if not sections:
-      objs.append((leg, (sections, None)))
+      objs.append((leg, (sections, None, end_pt)))
       continue
     
     # endpoint
@@ -149,13 +153,13 @@ def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
     br = last.end + last.binormal * WIDTH - last.normal * HEIGHT
     bl = last.end - last.binormal * WIDTH - last.normal * HEIGHT
     
-    objs.append((leg, (sections, Rect3D(tl, tr, br, bl))))
+    objs.append((leg, (sections, Rect3D(tl, tr, br, bl), end_pt)))
   
-  ret: list[tuple[Leg, Object3D]] = []
+  ret: list[tuple[Leg, Object3D, PathPoint]] = []
   
-  for leg, (sections, last) in objs:
+  for leg, (sections, last, endpt) in objs:
     if not last:
-      ret.append((leg, Object3D([], [])))
+      ret.append((leg, Object3D([], []), endpt))
       continue
     
     assert (len(sections) >= 1)
@@ -180,7 +184,7 @@ def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
     obj.vertices += [last.top_left, last.bottom_left, last.bottom_right, last.top_right]
     obj.polygons.append([tl, tr, br, bl])
     
-    ret.append((leg, obj))
+    ret.append((leg, obj, endpt))
   
   return ret
 
@@ -196,6 +200,12 @@ def make_proc_sig(airport: str, proc: str, runway: str | None, transition: str |
   if not transition: transition = "n"
   return f"{airport}_{proc}_{runway}_{transition}"
 
+@dataclass
+class BuiltProc:
+  tiles: list[tuple[int, int]]
+  objects: list[tuple[Leg, Object3D, PathPoint]]
+  initial_point: PathPoint
+  
 def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str | None, transition: str | None, start_alt: int):
   match proc:
     case SID(_, airport, rwys, _, _):
@@ -210,7 +220,7 @@ def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str 
       legs = proc.rwys[runway]
       if transition: legs = legs + get_transition(proc, transition)
       
-      leg_points, _ = build_points(legs, config, start.to_rad(), None, start_alt, True)
+      leg_points, _ = build_points(legs, config, start.to_rad(), False, None, start_alt, True, True)
       
     case STAR(_, airport, rwys, _, _):
       if not runway:
@@ -223,11 +233,9 @@ def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str 
       legs = proc.rwys[runway]
       if transition: legs = get_transition(proc, transition) + legs
       
-      leg_points, _ = build_points(legs, config, None, None, start_alt, False)
+      leg_points, _ = build_points(legs, config, None, False, None, start_alt, False, False)
     
     case Approach(_, airport, rwy, legs, _):
-      if not runway:
-        raise ValueError("A runway is required for STARS.")
       if runway != rwy:
         raise KeyError("Invalid runway.")
       
@@ -244,12 +252,12 @@ def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str 
       
       if transition: legs = get_transition(proc, transition) + legs
       
-      appch_leg_points, appch_all_points = build_points(legs, config, None, None, 0, False)
+      appch_leg_points, appch_all_points = build_points(legs, config, None, False, None, 0, False, False)
       if not appch_all_points: raise Exception("Procedure contains only one point.")
       
       end = appch_all_points[-1]
       
-      map_leg_points, _ = build_points(map_legs, config, end.latlon(), end.course, end.altitude, True)
+      map_leg_points, _ = build_points(map_legs, config, end.latlon(), True, end.course, end.altitude, True, True)
       
       leg_points = appch_leg_points + map_leg_points
   
@@ -259,6 +267,7 @@ def build_proc(proc: SID | STAR | Approach, config: AircraftConfig, runway: str 
     for p in ps:
       req_tiles.add((floor(p.lat * 180 / pi), floor(p.lon * 180 / pi)))
   
-  return (list(req_tiles), build_3d(leg_points))
+  first_point = leg_points[0][1][0]
+  return BuiltProc(list(req_tiles), build_3d(leg_points), first_point)
   
       

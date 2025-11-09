@@ -78,8 +78,10 @@ def build_points(
     legs: list[Leg],
     config: AircraftConfig,
     start_point: tuple[float, float] | None,
+    overfly_start: bool,
     start_course: float | None,
     start_alt: float,
+    force_start_alt: bool,
     ascending: bool):
   
   leg_points: list[tuple[Leg, list[PathPoint]]] = []
@@ -87,10 +89,11 @@ def build_points(
   
   cstrs = build_alt_constr(legs, ascending)
   
-  match legs[0]:
-    case CourseToAlt() | HeadingToAlt() | FixToAltitude(): pass
-    case _:
-      start_alt = min(cstrs[0][1], max(cstrs[0][0], start_alt))
+  if not force_start_alt:
+    match legs[0]:
+      case CourseToAlt() | HeadingToAlt() | FixToAltitude(): pass
+      case _:
+        start_alt = min(cstrs[0][1], max(cstrs[0][0], start_alt))
   
   if start_course is None:
     cur_course = -1
@@ -101,7 +104,7 @@ def build_points(
   
   cur_alt = start_alt
   
-  overfly = False
+  overfly = overfly_start
   
   points: list[PathPoint] = []
   
@@ -133,7 +136,7 @@ def build_points(
       p2 = all_points[-2]
     else: return
     
-    if (to_xyz(*p1.latlon()) - to_xyz(*p2.latlon())).mag2() < TOLERANCE: return
+    if (to_xyz(*p1.latlon()) - to_xyz(*p2.latlon())).mag2() < TOLERANCE * TOLERANCE: return
       
     crs = get_course_between(p2.latlon(), p1.latlon())
     if crs != -1: cur_course = crs
@@ -287,13 +290,19 @@ def build_points(
     match leg:
       case InitialFix(info, fix):
         if not intercepting:
-          points.append(PathPoint(*waypoint_rad(fix), cur_course, cur_alt))
+          if not points:
+            points.append(PathPoint(*waypoint_rad(fix), cur_course, cur_alt))
+          else:
+            # this can happen when a SID starts with an initial fix
+            # you are expected to receive vectctors to the initial fix
+            points.append(PathPoint(*waypoint_rad(fix), cur_course))
           auto_course()
       case TrackToFix(info, fix):
         req_crs = course_to(fix)
         td = turn_dir(leg, req_crs)
-        new_p = to_fix_track(leg, fix, req_crs)
-        points += new_p
+        if overfly:
+          new_p = to_fix_track(leg, fix, req_crs)
+          points += new_p
         points.append(PathPoint(
           *fix.to_rad(), course_to(fix)
         ))
@@ -448,8 +457,7 @@ def build_points(
         
       case CourseToIntercept(info, course, _) | HeadingToIntercept(info, course, _):
         crs = to_mag(cur_latlon(), course)
-        if overfly:
-          points += turn_to_crs(leg, crs)
+        points += turn_to_crs(leg, crs)
         cur_course = crs
         
         # Only AF, CF, FA, FC, FD, FM, IF legs can follow a CI leg

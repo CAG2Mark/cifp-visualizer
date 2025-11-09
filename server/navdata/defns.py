@@ -64,7 +64,7 @@ class SpeedRestr:
 class AtSpeed(SpeedRestr):
   speed: int
   def pretty_print(self) -> str:
-    return f"{self.speed}kt"
+    return f"At {self.speed}kt"
 
 # =+, -
 @dataclass
@@ -79,7 +79,7 @@ class SpeedRange(SpeedRestr):
 @dataclass
 class AtAlt(AltRestr):
   at: int
-  def pretty_print(self) -> str: return str(self.at)
+  def pretty_print(self) -> str: return "At " + str(self.at)
 
 # +, -, B, C
 @dataclass
@@ -91,7 +91,7 @@ class AltRange(AltRestr):
     below = self.below
     
     if above == below and not (above is None):
-      return str(above)
+      return "At " + str(above)
     
     ret = ""
     if not (self.above is None):
@@ -108,8 +108,8 @@ class GlideslopeAlt(AltRestr):
   above: bool # true = above, false = at
   
   def pretty_print(self) -> str:
-    qual = "A" if self.above else ""
-    return f"{qual}{self.above}, GS{self.msl}" 
+    qual = "A" if self.above else "At "
+    return f"{qual}{self.alt}, GS{self.msl}" 
 
 # I, J
 @dataclass
@@ -119,8 +119,8 @@ class GlideslopeIntc(AltRestr):
   above: bool # true = above, false = at
 
   def pretty_print(self) -> str:
-    qual = "A" if self.above else ""
-    return f"{qual}{self.above}, GS Intercept {self.intc}" 
+    qual = "A" if self.above else "At "
+    return f"{qual}{self.alt}, GS Intercept {self.intc}" 
 # V, Y
 @dataclass
 class StepDownAboveBelow(AltRestr):
@@ -138,7 +138,7 @@ class StepDownAt(AltRestr):
   valt: int
 
   def pretty_print(self) -> str:
-    return f"{self.alt}, Glide {self.valt}" 
+    return f"At {self.alt}, Glide {self.valt}" 
 
 @dataclass
 class RadialDME:
@@ -176,7 +176,7 @@ class LegInfo:
 class Leg:
   def type_str(self) -> str:
     raise NotImplementedError("Not implemented")
-  def human_name(self) -> str:
+  def title(self) -> str:
     raise NotImplementedError("Not implemented")    
   def fix_name(self) -> str:
     raise NotImplementedError
@@ -189,8 +189,8 @@ class InitialFix(Leg):
   def fix_name(self) -> str:
     return self.fix.name
   
-  def human_name(self) -> str:
-    return "Initial fix"
+  def title(self) -> str:
+    return "Initial Fix"
     
 
 @dataclass
@@ -199,8 +199,8 @@ class TrackToFix(Leg):
   fix: Waypoint
   def fix_name(self) -> str:
     return self.fix.name
-  def human_name(self) -> str:
-    return "Track to fix"
+  def title(self) -> str:
+    return "Track to Fix"
 
 @dataclass
 class CourseToFix(Leg):
@@ -212,8 +212,8 @@ class CourseToFix(Leg):
   
   def fix_name(self) -> str:
     return self.fix.name
-  def human_name(self) -> str:
-    return "Course to fix"
+  def title(self) -> str:
+    return f"Course {self.course.pretty_print()} to Fix"
 
 @dataclass
 class DirectToFix(Leg):
@@ -225,8 +225,8 @@ class DirectToFix(Leg):
   def fix_name(self) -> str:
     return self.fix.name
   
-  def human_name(self) -> str:
-    return "Direct to fix"
+  def title(self) -> str:
+    return "Direct to Fix"
 
 @dataclass
 class FixToAltitude(Leg):
@@ -241,8 +241,8 @@ class FixToAltitude(Leg):
   def fix_name(self) -> str:
     return f"({self.alt}ft)"
   
-  def human_name(self) -> str:
-    return "Fix to altitude"
+  def title(self) -> str:
+    return "Fix to Altitude"
 
 @dataclass
 class FixToDistance(Leg):
@@ -252,8 +252,8 @@ class FixToDistance(Leg):
   course: Course
   dist: float
   
-  def human_name(self) -> str:
-    return "Fix to distance"
+  def title(self) -> str:
+    return "Fix to Distance"
   
   def fix_name(self) -> str:
     return f"{self.start.name}/{self.dist}NM/{self.course.pretty_print()}"
@@ -270,7 +270,7 @@ class FixToDME(Leg):
   def fix_name(self) -> str:
     return f"D{self.dist}{self.ref.name}"
   
-  def human_name(self) -> str:
+  def title(self) -> str:
     return "Fix to DME"
   
 @dataclass
@@ -284,8 +284,8 @@ class FixToManual(Leg):
   def fix_name(self) -> str:
     return ""
   
-  def human_name(self) -> str:
-    return "Fix to manual"
+  def title(self) -> str:
+    return "Fix to Manual"
 
 @dataclass
 class CourseToAlt(Leg):
@@ -297,8 +297,8 @@ class CourseToAlt(Leg):
   def fix_name(self) -> str:
     return f"({self.alt}ft)"
   
-  def human_name(self) -> str:
-    return "Course to altitude" 
+  def title(self) -> str:
+    return f"Course {self.course.pretty_print()} to Altitude" 
 
 @dataclass
 class CourseToDME(Leg):
@@ -309,10 +309,10 @@ class CourseToDME(Leg):
   dist: float
   
   def fix_name(self) -> str:
-    return f"D{self.dist}{self.ref.name}"
+    return f"{self.ref.name}/{self.dist}DME"
 
-  def human_name(self) -> str:
-    return "Course to DME"
+  def title(self) -> str:
+    return f"Course {self.course.pretty_print()} to DME"
   
   
 @dataclass
@@ -325,8 +325,8 @@ class CourseToIntercept(Leg):
   def fix_name(self) -> str:
     return "(Intercept)"
   
-  def human_name(self) -> str:
-    return "Course to intercept"
+  def title(self) -> str:
+    return f"Course {self.course.pretty_print()} to Intercept"
 
 @dataclass
 class CourseToRadial(Leg):
@@ -338,8 +338,8 @@ class CourseToRadial(Leg):
   def fix_name(self) -> str:
     return f"{self.radial.fix.name}/{self.radial.rad.pretty_print()}"
   
-  def human_name(self) -> str:
-    return "Course to radial"
+  def title(self) -> str:
+    return f"Course {self.course.pretty_print()} to Radial"
   
 @dataclass
 class RadiusArc(Leg):
@@ -352,8 +352,8 @@ class RadiusArc(Leg):
   def fix_name(self) -> str:
     return self.fix.name
   
-  def human_name(self) -> str:
-    return "Constant radius arc"
+  def title(self) -> str:
+    return "Constant Radius Arc"
   
 @dataclass
 class ArcToFix(Leg):
@@ -365,8 +365,8 @@ class ArcToFix(Leg):
   def fix_name(self) -> str:
     return self.fix.name
   
-  def human_name(self) -> str:
-    return "Arc to fix"
+  def title(self) -> str:
+    return "Arc to Fix"
   
 @dataclass
 class HeadingToAlt(Leg):
@@ -378,22 +378,22 @@ class HeadingToAlt(Leg):
   def fix_name(self) -> str:
     return f"({self.alt}ft)"
   
-  def human_name(self) -> str:
-    return "Heading to altitude"
+  def title(self) -> str:
+    return f"Heading {self.heading.pretty_print()} to Altitude"
   
 @dataclass
 class HeadingToDME(Leg):
   def type_str(self): return "VD"
   
-  course: Course
+  heading: Course
   ref: Waypoint
   dist: float
 
   def fix_name(self) -> str:
-    return f"D{self.dist}{self.ref.name}"
+    return f"{self.ref.name}/{self.dist}DME"
   
-  def human_name(self) -> str:
-    return "Heading to DME"
+  def title(self) -> str:
+    return f"Heading {self.heading.pretty_print()} to DME"
   
 @dataclass
 class HeadingToIntercept(Leg):
@@ -405,8 +405,8 @@ class HeadingToIntercept(Leg):
   def fix_name(self) -> str:
     return "(Intercept)"
   
-  def human_name(self) -> str:
-    return "Heading to intercept"
+  def title(self) -> str:
+    return f"Heading {self.heading.pretty_print()} to Intercept"
   
 @dataclass
 class HeadingToManual(Leg):
@@ -419,8 +419,8 @@ class HeadingToManual(Leg):
   def fix_name(self) -> str:
     return ""
 
-  def human_name(self) -> str:
-    return "Heading to manual"
+  def title(self) -> str:
+    return f"Heading {self.heading.pretty_print()} to Manual"
   
 @dataclass
 class HeadingToRadial(Leg):
@@ -432,8 +432,8 @@ class HeadingToRadial(Leg):
   def fix_name(self) -> str:
     return f"{self.radial.fix.name}/{self.radial.rad.pretty_print()}"
   
-  def human_name(self) -> str:
-    return "Heading to radial"
+  def title(self) -> str:
+    return "Heading to Radial"
 # Course reversal
 @dataclass
 class ProcTurn(Leg):
@@ -447,8 +447,8 @@ class ProcTurn(Leg):
   def fix_name(self) -> str:
     return f"(Proc turn)"
 
-  def human_name(self) -> str:
-    return "Procedure turn"
+  def title(self) -> str:
+    return "Procedure Turn"
 
 # terminates at an altitude
 @dataclass
@@ -463,7 +463,7 @@ class HoldAlt(Leg):
   def fix_name(self) -> str:
     return self.fix.name
 
-  def human_name(self) -> str:
+  def title(self) -> str:
     return "Hold to altitude"
   
 # terminates after one orbit
@@ -478,7 +478,7 @@ class HoldFix(Leg):
   def fix_name(self) -> str:
     return self.fix.name
 
-  def human_name(self) -> str:
+  def title(self) -> str:
     return "Hold once"
   
 @dataclass
@@ -492,7 +492,7 @@ class HoldToManual(Leg):
   def fix_name(self) -> str:
     return self.fix.name
 
-  def human_name(self) -> str:
+  def title(self) -> str:
     return "Hold"
   
 @dataclass
