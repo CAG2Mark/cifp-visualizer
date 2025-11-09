@@ -256,8 +256,6 @@ function init() {
     };
 
     const onKeyUp = function (event) {
-        if (document.activeElement != document.body) return;
-        
         switch (event.code) {
             case 'ArrowUp':
             case 'KeyW':
@@ -647,8 +645,22 @@ async function loadProc() {
     transSel.disabled = false;
 
     loadingProc = false;
-    
+
     let tiles = await (await fetch(prefix + "/tiles.json")).json();
+    let tilesDict = {};
+    
+    for (let i = 0; i < tiles.length; ++i) {
+        let tile = tiles[i]
+        tilesDict[[tile[0], tile[1]]] = true;
+    }
+    
+    let loaded = Object.keys(loadedTiles);
+    for (let i = 0; i < loaded.length; ++i) {
+        if (tilesDict.hasOwnProperty(loaded[i])) continue;
+        let tile = loaded[i].split(",");
+        unloadTile(parseInt(tile[0]), parseInt(tile[1]));
+    }
+    
     for (let i = 0; i < tiles.length; ++i) {
         let tile = tiles[i]
         loadTile(tile[0], tile[1], 13);
@@ -805,6 +817,14 @@ async function ensure_url(url, jobId) {
             return obj;
         }
     }
+}
+
+function unloadTile(lat, lon) {
+    if (loadingTiles[[lat, lon]]) return;
+    
+    let obj = loadedTiles[[lat, lon]];
+    scene.remove(obj);
+    delete loadedTiles[[lat, lon]];
 }
 
 async function loadTile(lat, lon, zl) {
