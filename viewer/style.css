@@ -113,6 +113,7 @@ body {
 }
 
 #sidebar {
+    width: 350px;
     position: relative;
     background-color: #dcdcdc;
     height: 100vh;

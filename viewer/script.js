@@ -73,7 +73,7 @@ async function do_debug() {
     // submit_icao("VHHH")
 }
 
-function loadObj(file, mtlFile) {
+function loadObj(id, file, mtlFile) {
     console.log("loading " + file)
 
     return new Promise((resolve, reject) => {
@@ -82,14 +82,13 @@ function loadObj(file, mtlFile) {
             mtlFile,
             function (materials) {
                 materials.preload();
-                console.log(materials)
                 const loader = new OBJLoader();
                 loader.setMaterials(materials);
                 loader.load(
                     file,
                     function (object) {
                         scene.add(object);
-                        resolve(object);
+                        resolve([id, object]);
                     },
                     (xhr) => {
                         console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
@@ -227,19 +226,25 @@ function init() {
         if (document.activeElement != document.body) return;
         
         switch (event.code) {
-            case 'ArrowUp':
+            case 'ArrowLeft':
+                if (selectedLeg && legListeners[selectedLeg]) {
+                    legListeners[selectedLeg](false);
+                }
+                break;
+            case 'ArrowRight':
+                if (selectedLeg && legListeners[selectedLeg]) {
+                    legListeners[selectedLeg](true);
+                }
+                break;
             case 'KeyW':
                 moveForward = true;
                 break;
-            case 'ArrowLeft':
             case 'KeyA':
                 moveLeft = true;
                 break;
-            case 'ArrowDown':
             case 'KeyS':
                 moveBackward = true;
                 break;
-            case 'ArrowRight':
             case 'KeyD':
                 moveRight = true;
                 break;
@@ -257,19 +262,15 @@ function init() {
 
     const onKeyUp = function (event) {
         switch (event.code) {
-            case 'ArrowUp':
             case 'KeyW':
                 moveForward = false;
                 break;
-            case 'ArrowLeft':
             case 'KeyA':
                 moveLeft = false;
                 break;
-            case 'ArrowDown':
             case 'KeyS':
                 moveBackward = false;
                 break;
-            case 'ArrowRight':
             case 'KeyD':
                 moveRight = false;
                 break;
@@ -486,7 +487,7 @@ var curProc;
 var curAirport;
 var curRwy;
 var curTrans;
-var curObjs = [];
+var curObjs = {};
 
 let legsAirport = $("legs-airport");
 let legsKind = $("legs-kind");
@@ -565,6 +566,67 @@ async function initProc(proc) {
     await loadProc();
 }
 
+
+var selectedObj = null;
+var selectedLeg = null;
+var legRadios = {};
+var prevR;
+var prevG;
+var prevB;
+var prevOpacity;
+
+function unselectObj() {
+    selectedObj.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+            child.material.color.r = prevR;
+            child.material.color.g = prevG;
+            child.material.color.b = prevB;
+            child.material.opacity = prevOpacity;
+        }
+    });
+}
+
+function selLeg(legId) {
+    if (selectedObj) {
+        unselectObj(selectedObj);
+    }
+    selectObj(curObjs[legId]);
+    legRadios[legId].checked = true;
+    selectedObj = curObjs[legId];
+    selectedLeg = legId;
+}
+
+function selectObj(object) {
+    object.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+            console.dir(child.material);
+            prevR = child.material.color.r;
+            prevG = child.material.color.g;
+            prevB = child.material.color.b;
+            prevOpacity = child.material.opacity;
+            child.material.color.r = 1;
+            child.material.color.g = 0.1;
+            child.material.color.b = 0.1;
+            child.material.opacity = 1;
+        }
+    });
+}
+
+function registerLegClickListener(node, legId) {
+    node.addEventListener("click", () => {
+        selLeg(legId);
+    })
+}
+
+let legListeners = {};
+
+function registerLegKeyListeners(legId, prevLeg, nextLeg) {
+    legListeners[legId] = goNext => {
+        if (goNext && nextLeg) selLeg(nextLeg);
+        else if (!goNext && prevLeg) selLeg(prevLeg);
+    }
+}
+
 let legsArea = $("legs-area");
 let loadingProc = false;
 async function loadProc() {
@@ -574,8 +636,9 @@ async function loadProc() {
     let updatePos = curAirport != prevAirport;
     prevAirport = curAirport;
 
-    for (let i = 0; i < curObjs.length; ++i) {
-        scene.remove(curObjs[i]);
+    let objs = Object.values(curObjs);
+    for (let i = 0; i < objs.length; ++i) {
+        scene.remove(objs[i]);
     }
 
     rwySel.disabled = true;
@@ -598,6 +661,9 @@ async function loadProc() {
     let promises = [];
     
     let isMap = false;
+    
+    legListeners = {};
+    legRadios = {};
 
     for (let i = 0; i < data.length; ++i) {
         let leg = data[i];
@@ -611,6 +677,8 @@ async function loadProc() {
 
         let radio = node.getElementsByClassName("leg-radio")[0];
         radio.id = id;
+        
+        legRadios[leg["legId"]] = radio;
 
         let lbl = node.getElementsByClassName("leg-label")[0];
         lbl.setAttribute("for", id);
@@ -624,13 +692,18 @@ async function loadProc() {
         populateChild(node, "leg-restr", (alt + sep + spd).trimStart());
 
         legsArea.appendChild(node);
-
+        registerLegClickListener(lbl, leg["legId"]);
+        
+        let prevLeg = null, nextLeg = null;
+        if (i != 0) prevLeg = data[i - 1]["legId"];
+        if (i != data.length - 1) nextLeg = data[i + 1]["legId"];
+        registerLegKeyListeners(leg["legId"], prevLeg, nextLeg);
+        
         let mtl = isMap ? "mappath.mtl" : "path.mtl"; 
-        promises.push(loadObj(prefix + "/" + leg["legId"] + ".obj", mtl));
+        promises.push(loadObj(leg["legId"], prefix + "/" + leg["legId"] + ".obj", mtl));
     }
 
     let points = await (await fetch(prefix + "/points.json")).json();
-    console.log(points);
     let latlon = points["initialLatLon"];
     let alt = points["initialAlt"];
 
@@ -639,7 +712,11 @@ async function loadProc() {
     }
 
     let vals = await Promise.all(promises);
-    curObjs = vals;
+    curObjs = {};
+    for (let i = 0; i < vals.length; ++i) {
+        let [id, obj] = vals[i];
+        curObjs[id] = obj;
+    }
 
     rwySel.disabled = false;
     transSel.disabled = false;
@@ -665,6 +742,8 @@ async function loadProc() {
         let tile = tiles[i]
         loadTile(tile[0], tile[1], 13);
     }
+    
+    selectedObj = null;
 }
 
 
@@ -847,8 +926,6 @@ async function loadTile(lat, lon, zl) {
     let b = ensure_url(terr, jobTerr);
 
     let [photoBlob, terrBlob] = await Promise.all([a, b]);
-
-    console.log("awaited");
     
     let jobLoad = `${lat},${lon}_load`;
     addJobStatus(jobLoad, `Loading tile ${lat}, ${lon}...`)
@@ -865,7 +942,7 @@ async function loadTile(lat, lon, zl) {
                 function (object) {
                     var texture = new THREE.TextureLoader().load(photoBlob);
 
-                    object.traverse(function (child) {   // aka setTexture
+                    object.traverse(function (child) {
                         if (child instanceof THREE.Mesh) {
                             child.material.map = texture;
                         }

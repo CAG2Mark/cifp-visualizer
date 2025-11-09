@@ -31,6 +31,14 @@ constexpr double to_nm(double metres) {
 
 int load_data(int16_t *&out, size_t &size, const string &nme) {
     ifstream is(nme, ifstream::binary);
+    if (!is) {
+        // try a lowercase name
+        string nme2 = nme;
+        nme2[10] ^= 32;
+        nme2[13] ^= 32;
+        is = ifstream(nme2, ifstream::binary);
+    }
+    
     if (is) {
         // get length of file
         is.seekg(0, is.end);

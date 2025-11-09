@@ -48,14 +48,14 @@ def get_vfp_file(tile: Tile):
     return "ANTDEM3/46-60"
   if 61 <= lat <= 62 and -8 <= lon <= -7:
     return "dem3/FAR"
+  if 63 <= lat <= 66 and -25 <= lon <= -14:
+    return "dem3/ISL"
   if 59 <= lat <= 63 and -52 <= lon <= -41:
     return "dem3/GL-South"
   if 75 <= lat <= 83 and -78 <= lon <= -12:
     return "dem3/GL-North"
   if 70 <= lat <= 71 and -10 <= lon <= -8:
     return "dem3/JANMAYEN"
-  if 63 <= lat <= 66 and -25 <= lon <= -14:
-    return "dem3/ISL"
   if -90 <= lat <= -66 and 0 <= lon <= 89:
     return "ANTDEM3/31-45"
   if 64 <= lat <= 75 and -42 <= lon <= -18:
