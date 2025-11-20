@@ -52,11 +52,11 @@ class CreateImageJobNew(Job):
     height = min(4096, 1 << (self.zl - 1))
     width = int(height * cos(self.tile.lat * pi / 180))
     
+    remove = False
+    
     url = f"https://tiles.maps.eox.at/wms?service=wms&request=getmap&layers=s2cloudless-2024&srs=EPSG:4326&bbox={x1},{y1},{x2},{y2}&width={width}&height={height}&format=image/jpeg"
-    print(url)
     r = requests.get(url, stream=True)
     contenttype = r.headers.get("content-type")
-    print(contenttype)
     if contenttype is None or contenttype != "image/jpeg":
       logger.warn(f"Did not get the expected image type when downloading tile {self.tile}. Replacing with a white image.")
       self.copy_default()
@@ -64,6 +64,10 @@ class CreateImageJobNew(Job):
       logger.warn(f"Error {r.status_code} when downloading {self.tile}. Replacing with a white image.")
       self.copy_default()
     else:
+      if not os.path.exists("cache"):
+        os.mkdir("cache")
+      if not os.path.exists("cache/tileimg"):
+        os.mkdir("cache/tileimg")
       with open(self.path, "wb") as f:
         if 'content-length' in r.headers:
           total_length = int(r.headers.get('content-length'))
@@ -72,15 +76,19 @@ class CreateImageJobNew(Job):
         
         try:
           recv = 0
-          for data in r.iter_content(chunk_size=4096):
+          for data in r.iter_content(chunk_size=1024):
             recv += len(data)
             f.write(data)
             if total_length:
               with self.prog_lock:
                 self.dl_progress = recv / total_length
-        except requests.exceptions.ChunkedEncodingError:
+        except requests.exceptions.ChunkedEncodingError as e:
+          print(e)
+          print(e.args)
           logger.error("Connection error when downloading {self.tile}.")
-          self.done()
+          remove = True
+
+    if remove: os.remove(self.path)
           
     self.done()
     
