@@ -419,6 +419,7 @@ class CIFPServer(BaseHTTPRequestHandler):
           serve_file()
           return
         
+        builder.build_proc(proc, AircraftConfig(), runway, transition, altitude)
         try:
           ret = builder.build_proc(proc, AircraftConfig(), runway, transition, altitude)
           req_tiles, objs, initial = ret.tiles, ret.objects, ret.initial_point

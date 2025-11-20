@@ -1,3 +1,2 @@
 pygeomag==1.1.0
-numpy==2.3.4
 requests==2.32.5

@@ -111,7 +111,9 @@ def point_bisect_line(point: tuple[float, float], start: tuple[float, float], co
   return to_latlon((point_xyz - plane_normal * (point_xyz.dot(plane_normal))).normalize())
 
 def circle_distance(a: tuple[float, float], b: tuple[float, float]):
-  return abs(acos(to_xyz(*a).dot(to_xyz(*b))))
+  arg = to_xyz(*a).dot(to_xyz(*b))
+  arg = min(1, max(-1, arg))
+  return abs(acos(arg))
 
 def earth_distance(a: tuple[float, float], b: tuple[float, float]):
   return EARTH_RAD * circle_distance(a, b)

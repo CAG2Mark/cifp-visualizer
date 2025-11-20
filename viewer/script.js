@@ -339,8 +339,8 @@ function animate() {
             let xDel = mouseX - mouseXOld;
             let yDel = mouseY - mouseYOld;
 
-            cameraHdg -= xDel / 7 * TO_RAD * timeFactor;
-            cameraUpDown -= yDel / 7 * TO_RAD * timeFactor;
+            cameraHdg -= xDel / 7 * TO_RAD;
+            cameraUpDown -= yDel / 7 * TO_RAD;
 
             cameraUpDown = Math.max(Math.min(cameraUpDown, UPDOWN_BOUND), -UPDOWN_BOUND);
         }

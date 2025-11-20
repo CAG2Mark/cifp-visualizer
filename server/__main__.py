@@ -79,15 +79,11 @@ else:
   
   SID = False
   
-  dir = "/home/mark/gamedrive/xplane-12/Custom Data/"
-  #starts = set()
-  res = navdata.get_airport_data(airport_) if SID else navdata.get_airport_data(airport)
-  #for a in os.listdir(dir + "/CIFP"):
-  #  res = data.get_airport_data(a[:-4])
-  #  if res:
-  #    _, _, _, s = res
-  #    for e in s: starts.add(e)
-  #print(starts)
+  dir = "/home/mark/Documents/arinc/"
+  for a in os.listdir(dir + "/CIFP"):
+    res = navdata.get_airport_data(a[:-4])
+    
+  exit()
 
   if SID and res:
     sids, stars, appches = res
