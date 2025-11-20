@@ -2,7 +2,6 @@
 *.o
 *.obj
 *.jpg
-*.mtl
 cache
 */.cache
 */__pycache__
