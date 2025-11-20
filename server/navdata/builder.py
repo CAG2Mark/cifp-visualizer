@@ -50,18 +50,18 @@ class SectionObject:
   start_rect: Rect3D
 
 # one of (a, c) or (b, d) may be parallel
-def compute_intersection(a: Vec3, b: Vec3, c: Vec3, d: Vec3, x: float, y: float, z: float, w: float, default: Vec3):
-  try:
-    mat = [a.as_arr(), b.as_arr(), c.as_arr()]
-    rhs = [x, y, z]
-    return solve_matrix(mat, rhs)
-  except:
-    try:
-      mat = [a.as_arr(), b.as_arr(), d.as_arr()]
-      rhs = [y, z, w]
-      return solve_matrix(mat, rhs)
-    except:
-      return default
+#def compute_intersection(a: Vec3, b: Vec3, c: Vec3, d: Vec3, x: float, y: float, z: float, w: float, default: Vec3):
+#  try:
+#    mat = [a.as_arr(), b.as_arr(), c.as_arr()]
+#    rhs = [x, y, z]
+#    return solve_matrix(mat, rhs)
+#  except:
+#    try:
+#      mat = [a.as_arr(), b.as_arr(), d.as_arr()]
+#      rhs = [y, z, w]
+#      return solve_matrix(mat, rhs)
+#    except:
+#      return default
 
 def make_section_obj(prev_sec: SectionObject | None, p1: Vec3, p2: Vec3) -> SectionObject:
   tangent = (p2 - p1).normalize()
@@ -83,29 +83,30 @@ def make_section_obj(prev_sec: SectionObject | None, p1: Vec3, p2: Vec3) -> Sect
     return SectionObject(
       p1, p2, tangent, normal, binormal, top, left, bottom, right, 
       Rect3D(top_left_point, top_right_point, bottom_right_point, bottom_left_point))
-  if not prev_sec is None:
-    tl = compute_intersection(
-      normal, binormal, prev_sec.normal,  prev_sec.binormal,
-      top,    left,     prev_sec.top,     prev_sec.left,
-      top_left_point)
-    tr = compute_intersection(
-      normal, binormal, prev_sec.normal,  prev_sec.binormal,
-      top,    right,    prev_sec.top,     prev_sec.right,
-      top_right_point)
-    bl = compute_intersection(
-      normal, binormal, prev_sec.normal,  prev_sec.binormal,
-      bottom,    left,  prev_sec.bottom,  prev_sec.left,
-      bottom_left_point)
-    br = compute_intersection(
-      normal, binormal, prev_sec.normal,  prev_sec.binormal,
-      bottom, right,    prev_sec.bottom,  prev_sec.right,
-      bottom_right_point)
-
-    return SectionObject(
-      p1, p2, tangent, normal, binormal, top, left, bottom, right, 
-      Rect3D(tl, tr, br, bl))
-  else:
-    return default_return()
+  #if not prev_sec is None:
+  #  tl = compute_intersection(
+  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
+  #    top,    left,     prev_sec.top,     prev_sec.left,
+  #    top_left_point)
+  #  tr = compute_intersection(
+  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
+  #    top,    right,    prev_sec.top,     prev_sec.right,
+  #    top_right_point)
+  #  bl = compute_intersection(
+  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
+  #    bottom,    left,  prev_sec.bottom,  prev_sec.left,
+  #    bottom_left_point)
+  #  br = compute_intersection(
+  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
+  #    bottom, right,    prev_sec.bottom,  prev_sec.right,
+  #    bottom_right_point)
+  #
+  #  return SectionObject(
+  #    p1, p2, tangent, normal, binormal, top, left, bottom, right, 
+  #    Rect3D(tl, tr, br, bl))
+  #else:
+  
+  return default_return()
     
 
 def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):

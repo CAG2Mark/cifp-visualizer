@@ -3,7 +3,6 @@ from pygeomag import GeoMag
 import datetime
 from math import cos, sin, asin, acos, atan2, sqrt, pi, ceil
 from typing import Self
-import numpy as np
 
 NM_TO_FT = 6076.12
 
@@ -617,8 +616,9 @@ def to_latlon(v: Vec3) -> tuple[float, float]:
   )
 
 def solve_matrix(lhs: list[list[float]], rhs: list[float]):
-  arr = np.array(lhs, np.float64)
-  arr = np.linalg.inv(arr)
-  sol = arr @ np.array(rhs, np.float64)
-  return Vec3(sol[0].item(), sol[1].item(), sol[2].item())
+  pass
+  #arr = np.array(lhs, np.float64)
+  #arr = np.linalg.inv(arr)
+  #sol = arr @ np.array(rhs, np.float64)
+  #return Vec3(sol[0].item(), sol[1].item(), sol[2].item())
   
