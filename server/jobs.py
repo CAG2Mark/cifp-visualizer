@@ -5,10 +5,11 @@ from threading import Thread
 import requests
 import server.tiler as tiler
 import subprocess
-from os import pipe
 from server.downloaders import *
 import zipfile
 from threading import Lock
+import uuid
+from PIL import Image
 
 def make_uuid():
   ret = [""] * 32
@@ -51,13 +52,18 @@ class CreateImageJobNew(Job):
     y2 = y1 + 1
     height = min(4096, 1 << (self.zl - 1))
     width = int(height * cos(self.tile.lat * pi / 180))
-    
-    remove = False
-    
+
     url = f"https://tiles.maps.eox.at/wms?service=wms&request=getmap&layers=s2cloudless-2024&srs=EPSG:4326&bbox={x1},{y1},{x2},{y2}&width={width}&height={height}&format=image/jpeg"
     r = requests.get(url, stream=True)
     contenttype = r.headers.get("content-type")
-    if contenttype is None or contenttype != "image/jpeg":
+    
+    convert_png = contenttype == "image/png"
+    if convert_png:
+      logger.info(f"Tile {self.tile} is a png. Need to convert.")
+    
+    dl_path = "cache/tileimg/tmp" + str(uuid.uuid4())
+    
+    if contenttype is None or (contenttype != "image/jpeg" and contenttype != "image/png"):
       logger.warn(f"Did not get the expected image type when downloading tile {self.tile}. Replacing with a white image.")
       self.copy_default()
     elif r.status_code != 200 and r.status_code != 304:
@@ -68,7 +74,7 @@ class CreateImageJobNew(Job):
         os.mkdir("cache")
       if not os.path.exists("cache/tileimg"):
         os.mkdir("cache/tileimg")
-      with open(self.path, "wb") as f:
+      with open(dl_path, "wb") as f:
         if 'content-length' in r.headers:
           total_length = int(r.headers.get('content-length'))
         else:
@@ -86,10 +92,15 @@ class CreateImageJobNew(Job):
           print(e)
           print(e.args)
           logger.error("Connection error when downloading {self.tile}.")
-          remove = True
 
-    if remove: os.remove(self.path)
-          
+      if not convert_png:
+        shutil.copy(dl_path, self.path)
+      else:
+        shutil.move(dl_path, dl_path)
+        im = Image.open(dl_path)
+        im.convert("RGB").save(self.path)
+      os.remove(dl_path)
+    
     self.done()
     
   def progress(self):
