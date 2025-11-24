@@ -303,7 +303,7 @@ def turn_towards(
   # just make sure the two things are not too close to each other
   circ_dist = circle_distance(start.latlon(), dest)
   if circ_dist < 2 * turn_radius / EARTH_RAD:
-    turn_radius = circ_dist / 4
+    turn_radius = circ_dist / 2 * EARTH_RAD
   
   to_point = to_xyz(*start.latlon())
   tangent = get_sphere_tangent(start.latlon(), inbd_crs)
@@ -347,8 +347,7 @@ def turn_towards(
     # if we are turning left, then (course - req_course)
     return angle_between(course, req_crs)
   
-  # set up binary search
-  # bisect how much to turn
+  # set up search
   ITERATIONS = 720
   step = 2 * pi / ITERATIONS
   best = 100

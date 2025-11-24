@@ -140,7 +140,6 @@ def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
       sections.append(section)
       
       prev = p
-    
     assert prev
     end_pt = points[-1] if points else prev
     if not sections:

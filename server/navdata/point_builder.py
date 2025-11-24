@@ -258,12 +258,15 @@ def build_points(
     leg_points.append((leg, points))
     all_points += points
     points = []
-    
-  def flush_intercept(idx: int):
-    nonlocal intercepting
+  
+  intc_idx = -1
+  
+  def flush_intercept():
+    nonlocal intercepting, intc_idx
     if intercepting:
       intercepting = False
-      append_leg(idx - 1)
+      append_leg(intc_idx)
+    intc_idx = -1
 
   
   # Some approaches don't start with an IF
@@ -273,13 +276,19 @@ def build_points(
       case HoldFix(_, start, _, course) \
           | FixToDistance(_, start, course, _) \
           | FixToAltitude(_, start, course, _) \
-          | FixToDME(_, start, course, _, _) \
-          | ProcTurn(_, start, _, course, _) :
+          | FixToDME(_, start, course, _, _):
         crs = to_mag(start.to_rad(), course)
         pnt = PathPoint(*start.to_rad(), crs, start_alt)
         points.append(pnt)
         all_points.append(pnt)
         cur_course = crs
+      case ProcTurn(info, start, _, course, _):
+        crs = to_mag(start.to_rad(), course)
+        pnt = PathPoint(*start.to_rad(), crs, start_alt)
+        points.append(pnt)
+        all_points.append(pnt)
+        cur_course = crs + pi/4 if info.turndir else crs - pi/4
+        cur_course %= 2 * pi
       case _: pass
   else:
     pnt = PathPoint(*start_point, cur_course, start_alt)
@@ -314,7 +323,7 @@ def build_points(
         new_p = to_fix_track(leg, fix, crs)
         points += new_p
 
-        flush_intercept(i)
+        flush_intercept()
           
         points.append(PathPoint(
           *fix.to_rad(), course_to(fix)
@@ -339,7 +348,7 @@ def build_points(
         new_p = to_fix_track(leg, start, crs)
         points += new_p
     
-        flush_intercept(i)
+        flush_intercept()
         
         assert ascending
         
@@ -377,7 +386,7 @@ def build_points(
         new_p = to_fix_track(leg, start, crs)
         points += new_p
         
-        flush_intercept(i)
+        flush_intercept()
         
         dest_pt = go_dist_from(start.to_rad(), crs, dist)
         points.append(PathPoint(*dest_pt, crs))
@@ -389,7 +398,7 @@ def build_points(
         crs = to_mag(cur_latlon(), course)
         points += to_fix_track(leg, start, crs)
         
-        flush_intercept(i)
+        flush_intercept()
         
         dest_pt = go_to_dme(start.to_rad(), crs, ref.to_rad(), dme, cur_alt)
         points.append(PathPoint(*dest_pt, crs))
@@ -404,7 +413,7 @@ def build_points(
         else:
           points += turn_to_crs(leg, crs)
         
-        flush_intercept(i)
+        flush_intercept()
         
         overfly = False
         cur_course = crs
@@ -470,12 +479,13 @@ def build_points(
           case FixToDME(): pass
           case FixToManual(): pass
           case InitialFix(): pass
-          case _: raise ValueError("Leg type " + leg.type_str() + " cannot follow a CI leg")
+          case _: raise ValueError("Leg type " + next.type_str() + " cannot follow a CI leg")
         pass
         
         cur_course = crs
         overfly = False
         intercepting = True
+        intc_idx = i
         
       case CourseToRadial(info, course, radial) | HeadingToRadial(info, course, radial):
         crs = to_mag(cur_latlon(), course)
@@ -518,7 +528,7 @@ def build_points(
           intc = go_to_dme(cur_latlon(), cur_course, ref, dist)
           points.append(PathPoint(*intc, cur_course))
         
-        flush_intercept(i)
+        flush_intercept()
         
         new_p = get_arc_between_points(ref, last_point(), fix.to_rad(), POINT_DENSITY, info.turndir)
         points += new_p
@@ -527,9 +537,35 @@ def build_points(
           cur_course = new_p[-1].course
         overfly = info.overfly
         
-      case ProcTurn(info, fix, alt, course, _):
-        raise NotImplementedError()
+      case ProcTurn(info, fix, alt, course, dist):
+        assert not (info.turndir is None)
+        
+        crs = to_mag(cur_latlon(), course)
+        
+        new_crs = crs + pi/4 if info.turndir else crs - pi/4
+        new_crs %= 2 * pi
+        
+        points += to_fix_track(leg, fix, new_crs)
+        dest = go_to_dme(last_point().latlon(), new_crs, fix.to_rad(), max(0, dist - 4 * sqrt(2) * config.min_turn_tadius))
+        points.append(PathPoint(*dest, crs))
+        # first turn is in the opposite of what is specified
+        dest = go_dist_from(dest, crs, config.min_turn_tadius * 4)
+        points.append(PathPoint(*dest, crs))
+        overfly = True
+        points += turn_from(last_point(), crs, (crs + pi) % pi, config.min_turn_tadius, POINT_DENSITY, info.turndir)
+        
+        # only CF legs can follow a PI leg
+        next = legs[i + 1]
+        match next:
+          case CourseToFix(): pass
+          case InitialFix(): pass
+          case _: raise ValueError("Leg type " + next.type_str() + " cannot follow a PI leg")
         pass
+      
+        cur_course = (crs + pi) % pi
+        overfly = False
+        intercepting = True
+        intc_idx = i
 
       case HoldAlt(info, fix, _, _, _) | HoldFix(info, fix, _, _) | HoldToManual(info, fix, _, _):
         # raise NotImplementedError()
