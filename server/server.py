@@ -25,6 +25,13 @@ def get_navdata(): return navdata
 def set_navdata(data: NavDatabase):
   global navdata
   navdata = data
+
+config: dict[str, str]
+def set_config(cfg: dict[str, str]):
+  global config
+  config = cfg
+  
+def get_config(): return config
   
 def validate_tile(lat: int, lon: int):
   return (-85 <= lat < 85) and (-180 <= lon < 180)
@@ -155,7 +162,12 @@ class CIFPServer(BaseHTTPRequestHandler):
     elif not os.path.exists(path):
       logger.info(f"Dispatching job to create image {lat}/{lon}/{zl}.jpg.")
       # create job
-      job = CreateImageJobNew(self.img_job_done, tiler.Tile(lat, lon), zl, path)
+      KEY = "old_image_processing"
+      use_old = config[KEY] != "0" if KEY in config else False
+      if use_old:
+        job = CreateImageJob(self.img_job_done, tiler.Tile(lat, lon), zl, path)
+      else:
+        job = CreateImageJobNew(self.img_job_done, tiler.Tile(lat, lon), zl, path)
       self.img_jobs[path] = job
       job.perform()
       
@@ -496,38 +508,3 @@ class CIFPServer(BaseHTTPRequestHandler):
       self.handle_proc(values)
     else:
        self.send_404()
-
-if __name__ == "__main__":
-  logging.basicConfig(format='[%(asctime)s] %(name)s (%(levelname)s): %(message)s')
-  logger.setLevel(logging.INFO)
-
-  # load config
-  try:
-    with open("config.txt") as f:
-      data = f.read()
-      data = re.sub(r"#[^\n]*\n", "\n", data)
-      cfg: dict[str, str] = {}
-      for ln in data.split("\n"):
-        if not ln: continue
-        key, val = ln.split("=")
-        cfg[key.strip()] = val.strip()
-  except OSError:
-    logger.error("Could not open config file.")
-    exit(1)
-  
-  navdata_dir = cfg["data_dir"]
-  if navdata_dir.endswith("/"): navdata_dir = navdata_dir[:-1]
-  logger.info("Loading navdata from " + navdata_dir + ".")
-  navdata = NavDatabase(navdata_dir)
-  logger.info("Navdata loaded.")
-
-  webServer = HTTPServer((hostName, serverPort), CIFPServer)
-  logger.info("Server started http://%s:%s" % (hostName, serverPort))
-
-  try:
-    webServer.serve_forever()
-  except KeyboardInterrupt:
-    pass
-
-  webServer.server_close()
-  logger.info("Server stopped.")

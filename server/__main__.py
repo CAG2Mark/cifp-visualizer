@@ -27,6 +27,7 @@ except OSError:
   exit(1)
 
 navdata_dir = cfg["data_dir"]
+set_config(cfg)
 if navdata_dir.endswith("/"): navdata_dir = navdata_dir[:-1]
 logger.info("Loading navdata from " + navdata_dir + ".")
 navdata = NavDatabase(navdata_dir)

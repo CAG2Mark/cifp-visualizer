@@ -2,3 +2,4 @@
 
 # Navigation data directory
 data_dir=FILL HERE
+old_image_processing=0
