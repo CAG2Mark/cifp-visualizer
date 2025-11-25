@@ -1,5 +1,9 @@
-# Copy this file to config.txt
-
 # Navigation data directory
-data_dir=FILL HERE
+data_dir=navdata
+
+# Use old satellite image download method (download many tiles and stitch)
 old_image_processing=0
+
+# Server info
+hostname=localhost
+port=8080

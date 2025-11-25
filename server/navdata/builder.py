@@ -79,35 +79,10 @@ def make_section_obj(prev_sec: SectionObject | None, p1: Vec3, p2: Vec3) -> Sect
   right = bottom_right_point.dot(binormal)
   bottom = bottom_right_point.dot(normal)
   
-  def default_return():
-    return SectionObject(
-      p1, p2, tangent, normal, binormal, top, left, bottom, right, 
-      Rect3D(top_left_point, top_right_point, bottom_right_point, bottom_left_point))
-  #if not prev_sec is None:
-  #  tl = compute_intersection(
-  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
-  #    top,    left,     prev_sec.top,     prev_sec.left,
-  #    top_left_point)
-  #  tr = compute_intersection(
-  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
-  #    top,    right,    prev_sec.top,     prev_sec.right,
-  #    top_right_point)
-  #  bl = compute_intersection(
-  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
-  #    bottom,    left,  prev_sec.bottom,  prev_sec.left,
-  #    bottom_left_point)
-  #  br = compute_intersection(
-  #    normal, binormal, prev_sec.normal,  prev_sec.binormal,
-  #    bottom, right,    prev_sec.bottom,  prev_sec.right,
-  #    bottom_right_point)
-  #
-  #  return SectionObject(
-  #    p1, p2, tangent, normal, binormal, top, left, bottom, right, 
-  #    Rect3D(tl, tr, br, bl))
-  #else:
-  
-  return default_return()
-    
+  # Was previously trying to do something fancier, but it didn't work out
+  return SectionObject(
+    p1, p2, tangent, normal, binormal, top, left, bottom, right, 
+    Rect3D(top_left_point, top_right_point, bottom_right_point, bottom_left_point))
 
 def build_3d(leg_points: list[tuple[Leg, list[PathPoint]]]):
   # leg, (sections, previous leg's end rectangle, current leg's end point)

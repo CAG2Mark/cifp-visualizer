@@ -1,0 +1,15 @@
+APPCH:010,A,RNV-A,MSO,MSO,K1,D, ,V  A, ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,P,C;
+APPCH:020,A,RNV-A,MSO,CEBED,K1,E,A,EE B, ,010,TF, , , , , ,      ,    ,    ,1594,0076,+,10000,     ,     , ,   ,    ,   , , , , , ,B,P,C;
+APPCH:010,A,RNV-A,RIVAL,RIVAL,K1,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,P,C;
+APPCH:020,A,RNV-A,RIVAL,FEGUR,K1,P,C,E  A, ,010,TF, , , , , ,      ,    ,    ,0796,0180,+,10000,     ,     , ,   ,    ,   , , , , , ,B,P,C;
+APPCH:030,A,RNV-A,RIVAL,CEBED,K1,E,A,EE B, ,010,TF, , , , , ,      ,    ,    ,0739,0050,+,10000,     ,     , ,   ,    ,   , , , , , ,B,P,C;
+APPCH:010,A,RNV-A,TAGOE,TAGOE,K1,E,A,E  A, ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,P,C;
+APPCH:020,A,RNV-A,TAGOE,CEBED,K1,E,A,EE B, ,010,TF, , , , , ,      ,    ,    ,2553,0077,+,10000,     ,     , ,   ,    ,   , , , , , ,B,P,C;
+APPCH:010,R,RNV-A, ,CEBED,K1,E,A,E  I, ,   ,IF, , , , , ,      ,    ,    ,    ,    ,+,10000,     ,18000, ,   ,    ,   , , , , , ,B,P,C;
+APPCH:020,R,RNV-A, ,HAMID,K1,P,C,E  F, ,010,TF, , , , , ,      ,    ,    ,1624,0099,+,07100,     ,     , ,   ,    ,   ,RW12,K1,P,G, ,B,P,C;
+APPCH:030,R,RNV-A, ,RW12,K1,P,G,GY M, ,031,TF, , , , , ,      ,    ,    ,1624,0053, ,06400,     ,     , ,   , 000,   , , , , , ,B,P,C;
+APPCH:040,R,RNV-A, , , , , ,  M , ,   ,CA, , , , , ,      ,    ,    ,1624,    ,+,04014,     ,     , ,   ,    ,   , , , , , ,B,P,C;
+APPCH:050,R,RNV-A, ,TAGOE,K1,E,A,EY  ,L,010,DF, , , , , ,      ,    ,    ,    ,    ,+,13000,     ,     , ,   ,    ,   , , , , , ,B,P,C;
+APPCH:060,R,RNV-A, ,TAGOE,K1,E,A,EE  ,R,   ,HM, , , , , ,      ,    ,    ,3000,0080,+,13000,     ,     , ,   ,    ,   , , , , , ,B,P,C;
+RWY:RW12 ,     ,+10638,03539,V,    , ,   ;N46314323,W114032989,0000;
+RWY:RW30 ,     ,      ,03614,D,    , ,   ;N46311748,W114025021,0000;

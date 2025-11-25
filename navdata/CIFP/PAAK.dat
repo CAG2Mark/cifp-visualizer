@@ -1,0 +1,18 @@
+SID:010,5,INOTY1,RW34,ZIKEF,PA,P,C,EY  , ,010,DF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , , , , ;
+SID:020,5,INOTY1,RW34,BILNE,PA,P,C,EY  , ,010,TF, , , , , ,      ,    ,    ,2706,0114, ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+SID:030,5,INOTY1,RW34,INOTY,PA,E,A,EE  , ,010,TF, , , , , ,      ,    ,    ,3402,0198,+,06000,     ,     , ,   ,    ,   , , , , , , , , ;
+APPCH:010,A,RNV-A,HIMKI,HIMKI,PA,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,J,C;
+APPCH:020,A,RNV-A,HIMKI,CEVNO,PA,P,C,E  A, ,020,TF, , , , , ,      ,    ,    ,1787,0204,+,03500,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:030,A,RNV-A,HIMKI,GANEF,PA,P,C,EE B, ,010,TF, , , , , ,      ,    ,    ,1786,0169,+,02900,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:010,A,RNV-A,INOTY,INOTY,PA,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,J,C;
+APPCH:020,A,RNV-A,INOTY,CEVNO,PA,P,C,E  A, ,020,TF, , , , , ,      ,    ,    ,0970,0299,+,03500,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:030,A,RNV-A,INOTY,GANEF,PA,P,C,EE B, ,010,TF, , , , , ,      ,    ,    ,1786,0169,+,02900,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:010,R,RNV-A, ,GANEF,PA,P,C,E  I, ,   ,IF, , , , , ,      ,    ,    ,    ,    ,+,02900,     ,18000, ,   ,    ,   , , , , , ,B,J,C;
+APPCH:020,R,RNV-A, ,DIATI,PA,P,C,E  F, ,051,TF, , , , , ,      ,    ,    ,2671,0060,+,02000,     ,     , ,   ,    ,   ,MACSU,PA,P,C, ,B,J,C;
+APPCH:030,R,RNV-A, ,MACSU,PA,P,C,EY M, ,031,TF, , , , , ,      ,    ,    ,2821,0048, ,01280,     ,     , ,   , 000,   , , , , , ,B,J,C;
+APPCH:040,R,RNV-A, , , , , ,  M , ,   ,CA, , , , , ,      ,    ,    ,2821,    ,+,00457,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:050,R,RNV-A, ,WOKAT,PA,P,C,E   , ,010,DF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:060,R,RNV-A, ,INOTY,PA,E,A,EY  , ,010,TF, , , , , ,      ,    ,    ,3230,    ,+,03500,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:070,R,RNV-A, ,INOTY,PA,E,A,EE  ,R,020,HM, , , , , ,      ,    ,    ,0599,0040,+,03500,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+RWY:RW16 ,     ,      ,00055,D,    , ,   ;N52133553,W174123159,0000;
+RWY:RW34 ,     ,      ,00033,D,    , ,   ;N52125263,W174121308,0000;

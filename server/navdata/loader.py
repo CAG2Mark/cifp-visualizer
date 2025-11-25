@@ -519,10 +519,3 @@ class NavDatabase:
         if qual == "A": proc.transitions[trans_id] = legs
         else: proc.legs = legs
     return (sids, stars, appches)
-
-if __name__ == "__main__":
-  # testing
-  dir = "/home/mark/gamedrive/xplane-12/Custom Data/"
-  data = NavDatabase(dir)
-  for a in os.listdir(dir + "/CIFP"):
-    data.get_airport_data(a[:-4])

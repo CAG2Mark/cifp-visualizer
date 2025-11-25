@@ -613,11 +613,3 @@ def to_latlon(v: Vec3) -> tuple[float, float]:
     asin(v.z),
     atan2(v.y, v.x)
   )
-
-def solve_matrix(lhs: list[list[float]], rhs: list[float]):
-  pass
-  #arr = np.array(lhs, np.float64)
-  #arr = np.linalg.inv(arr)
-  #sol = arr @ np.array(rhs, np.float64)
-  #return Vec3(sol[0].item(), sol[1].item(), sol[2].item())
-  

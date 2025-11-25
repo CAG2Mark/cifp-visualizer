@@ -92,6 +92,10 @@ class CreateImageJobNew(Job):
           print(e)
           print(e.args)
           logger.error("Connection error when downloading {self.tile}.")
+          
+          os.remove(dl_path)
+          self.done()
+          return
 
       if not convert_png:
         shutil.copy(dl_path, self.path)
@@ -130,7 +134,7 @@ class CreateImageJob(Job):
       os.mkdir("cache")
     if not os.path.exists("cache/tileimg"):
       os.mkdir("cache/tileimg")
-    subprocess.run(["sticher/build/main", str(t.lat), str(t.lon), str(self.zl)])
+    subprocess.run(["stitcher/build/main", str(t.lat), str(t.lon), str(self.zl)])
     self.done()
     
   def progress(self):

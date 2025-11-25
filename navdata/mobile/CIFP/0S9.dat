@@ -1,0 +1,17 @@
+APPCH:010,A,RNV-A,JAWBN,JAWBN,K1,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,J,C;
+APPCH:020,A,RNV-A,JAWBN,YAYUB,K1,P,C,EY  , ,020,TF, , , , , ,      ,    ,    ,2758,0112,+,04300,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:030,A,RNV-A,JAWBN,YAYUB,K1,P,C,EE A,L,   ,HF, , , , , ,      ,    ,    ,0874,0040,+,03200,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:010,A,RNV-A,JIGEB,JIGEB,K1,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,J,C;
+APPCH:020,A,RNV-A,JIGEB,YAYUB,K1,P,C,EY  , ,020,TF, , , , , ,      ,    ,    ,1856,0084,+,03200,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:030,A,RNV-A,JIGEB,YAYUB,K1,P,C,EE A,L,   ,HF, , , , , ,      ,    ,    ,0874,0040,+,03200,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:010,A,RNV-A,WATTR,WATTR,K1,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , ,B,J,C;
+APPCH:020,A,RNV-A,WATTR,YAYUB,K1,P,C,EY  , ,020,TF, , , , , ,      ,    ,    ,2346,0069,+,03200,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:030,A,RNV-A,WATTR,YAYUB,K1,P,C,EE A,L,   ,HF, , , , , ,      ,    ,    ,0874,0040,+,03200,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:010,R,RNV-A, ,YAYUB,K1,P,C,E  I, ,   ,IF, , , , , ,      ,    ,    ,    ,    ,+,03200,     ,18000, ,   ,    ,   , , , , , ,B,J,C;
+APPCH:020,R,RNV-A, ,WIKUV,K1,P,C,E  F, ,051,TF, , , , , ,      ,    ,    ,0874,0060,+,02000,     ,     , ,   ,    ,   ,RW09,K1,P,G, ,B,J,C;
+APPCH:030,R,RNV-A, ,RW09,K1,P,G,GY M, ,031,TF, , , , , ,      ,    ,    ,0875,0058, ,01000,     ,     , ,   , 000,   , , , , , ,B,J,C;
+APPCH:040,R,RNV-A, , , , , ,  M , ,   ,CA, , , , , ,      ,    ,    ,0875,    ,+,00510,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:050,R,RNV-A, ,WATTR,K1,E,A,EY  ,L,   ,DF, , , , , ,      ,    ,    ,    ,    ,+,05400,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+APPCH:060,R,RNV-A, ,WATTR,K1,E,A,EE  ,R,   ,HM, , , , , ,      ,    ,    ,1331,0050,+,05400,     ,     , ,   ,    ,   , , , , , ,B,J,C;
+RWY:RW09 ,     ,      ,00109,V,    , ,   ;N48031719,W122485973,0000;
+RWY:RW27 ,     ,      ,00106,V,    , ,   ;N48031020,W122481681,0000;

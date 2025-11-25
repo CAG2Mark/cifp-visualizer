@@ -1,10 +1,8 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 import os
-from secrets import randbelow
 from threading import Lock
 from server.jobs import *
-import re
 from server.navdata.defns import *
 from server.navdata.loader import NavDatabase
 import server.navdata.builder as builder
@@ -12,9 +10,6 @@ import json
 from urllib.parse import urlparse
 
 from server.navdata.mathhelpers import to_xyz_earth
-
-hostName = "0.0.0.0"
-serverPort = 8080
 
 logger = logging.getLogger("cifp-viewer")
 

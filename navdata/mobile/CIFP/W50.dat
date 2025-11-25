@@ -1,0 +1,14 @@
+STAR:010,4,TRSTN3,LORAA,LORAA,K6,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , , , , ;
+STAR:020,4,TRSTN3,LORAA,DORRN,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,4,TRSTN3,LORAA,PERKN,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:040,4,TRSTN3,LORAA,JOHOF,K6,E,A,E  H, ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:050,4,TRSTN3,LORAA,TRSTN,K6,E,A,EE  , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:010,4,TRSTN3,THHMP,THHMP,K6,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , , , , ;
+STAR:020,4,TRSTN3,THHMP,TRSTN,K6,E,A,EE  , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:010,5,TRSTN3,ALL,TRSTN,K6,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , , , , ;
+STAR:020,5,TRSTN3,ALL,ASHLN,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,5,TRSTN3,ALL,EZZZZ,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:040,5,TRSTN3,ALL,RUANE,K6,E,A,EY  , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:050,5,TRSTN3,ALL,W50,K6,P,A,AE  , ,   ,VM, , , , , ,      ,    ,    ,0900,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+RWY:RW08 ,     ,      ,00605,D,    , ,   ;N39143213,W077091243,0000;
+RWY:RW26 ,     ,      ,00620,D,    , ,   ;N39143992,W077085035,0000;

@@ -24,9 +24,6 @@ def required3757Tiles(tile: Tile, zoom_level: int) -> list[Tile3587]:
   low_x, low_y = wgsTo3857(tile.lat + 1, tile.lon, zoom_level)
   high_x, high_y = wgsTo3857(tile.lat, tile.lon + 1, zoom_level)
   
-  print(low_x, low_y)
-  print(high_x, high_y)
-  
   tiles = []
   for x in range(low_x, high_x + 1):
     for y in range(low_y, high_y + 1):
@@ -87,12 +84,4 @@ def get_vfp_file(tile: Tile):
     if "P" <= letter <= "Q" and 32 <= horizontal <= 40: v2 = True
     if letter == "R" and 33 <= horizontal <= 38: v2 = True
   
-  return "dem3/" + ("S" if south else "") + letter + str(horizontal) + ("v2" if v2 else "")
-
-
-
-if __name__ == "__main__":
-  # testing
- print(get_vfp_file(Tile(69, 50)))
-  
-# ImageDownloader().download_images([Tile3587(1, 2, 5)], 1, 0)
+  return "dem3/" + ("S" if south else "") + letter + str(horizontal).rjust(2, "0") + ("v2" if v2 else "")

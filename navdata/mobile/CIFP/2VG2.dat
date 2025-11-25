@@ -1,0 +1,17 @@
+STAR:010,4,TIKEE3,BBONE,BBONE,K6,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , , , , ;
+STAR:020,4,TIKEE3,BBONE,LURAY,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,4,TIKEE3,BBONE,LLBEE,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,09000,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:040,4,TIKEE3,BBONE,TIKEE,K6,E,A,EE  , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:010,4,TIKEE3,ESL,ESL,K6,D, ,V   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,FL190,     ,18000, ,   ,    ,   , , , , , , , , ;
+STAR:020,4,TIKEE3,ESL,BBONE,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,4,TIKEE3,ESL,LURAY,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:040,4,TIKEE3,ESL,LLBEE,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,09000,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:050,4,TIKEE3,ESL,TIKEE,K6,E,A,EE  , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:010,4,TIKEE3,SEALZ,SEALZ,K6,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , , , , ;
+STAR:020,4,TIKEE3,SEALZ,LLBEE,K6,E,A,E   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,09000,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,4,TIKEE3,SEALZ,TIKEE,K6,E,A,EE  , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:010,5,TIKEE3,ALL,TIKEE,K6,E,A,E   , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000, ,   ,    ,   , , , , , , , , ;
+STAR:020,5,TIKEE3,ALL,JETIS,K6,E,A,EY  , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,5,TIKEE3,ALL,2VG2,K6,P,A,AE  , ,   ,VM, , , , , ,      ,    ,    ,0900,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+RWY:RW13 ,     ,      ,00558,D,    , ,   ;N38583061,W077523953,0000;
+RWY:RW31 ,     ,      ,00520,D,    , ,   ;N38580517,W077514378,0000;

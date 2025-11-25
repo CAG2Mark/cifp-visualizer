@@ -1,0 +1,11 @@
+A
+1000
+ATCFILE
+
+VOICE_DEF lib/atc/voices/default.voc
+CONTROLLER_END
+
+VOICE_DEF lib/atc/voices/default.voc
+CONTROLLER_END
+
+99

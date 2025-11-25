@@ -1,0 +1,42 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-O2",
+      "-std=c++20",
+      "-ffast-math",
+      "-g",
+      "-Isrc",
+      "-Iinclude",
+      "-Ilib/cimg",
+      "-o",
+      "src/cimg_wrapper.o",
+      "src/cimg_wrapper.cpp"
+    ],
+    "directory": "/storage/mark/Repos/COMP5411-project/stitcher",
+    "file": "/storage/mark/Repos/COMP5411-project/stitcher/src/cimg_wrapper.cpp",
+    "output": "/storage/mark/Repos/COMP5411-project/stitcher/src/cimg_wrapper.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-O2",
+      "-std=c++20",
+      "-ffast-math",
+      "-g",
+      "-Isrc",
+      "-Iinclude",
+      "-Ilib/cimg",
+      "-o",
+      "src/sticher.o",
+      "src/sticher.cpp"
+    ],
+    "directory": "/storage/mark/Repos/COMP5411-project/stitcher",
+    "file": "/storage/mark/Repos/COMP5411-project/stitcher/src/sticher.cpp",
+    "output": "/storage/mark/Repos/COMP5411-project/stitcher/src/sticher.o"
+  }
+]

@@ -811,8 +811,7 @@ function hidePopups() {
 }
 
 async function submit_icao(val) {
-    curAirport = val;
-
+    
     val = val.trim().toUpperCase();
     let res = await fetch("../airport/" + val);
     if (res.status == 404) {
@@ -829,6 +828,7 @@ async function submit_icao(val) {
         submitLock = false;
         return;
     }
+    curAirport = val;
     let data = await res.json();
     populateAirportData(data);
     submitLock = false;
