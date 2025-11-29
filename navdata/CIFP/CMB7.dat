@@ -1,0 +1,12 @@
+APPCH:010,A,RNVA,PIDKO,PIDKO,CY,P,C,E  A, ,010,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000,-,210,    ,   , , , , , ,B,U,C;
+APPCH:020,A,RNVA,PIDKO,AGBIL,CY,P,C,EE B, ,010,TF, , , , , ,      ,    ,    ,    ,    ,+,02200,     ,     , ,   ,    ,   , , , , , ,B,U,C;
+APPCH:010,A,RNVA,REVIM,REVIM,CY,P,C,E  A, ,010,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,18000,-,210,    ,   , , , , , ,B,U,C;
+APPCH:020,A,RNVA,REVIM,AGBIL,CY,P,C,EE B, ,010,TF, , , , , ,      ,    ,    ,    ,    ,+,02200,     ,     , ,   ,    ,   , , , , , ,B,U,C;
+APPCH:010,R,RNVA, ,AGBIL,CY,P,C,E  I, ,010,IF, , , , , ,      ,    ,    ,    ,    ,+,02200,     ,18000, ,   ,    ,   , , , , , ,B,U,C;
+APPCH:020,R,RNVA, ,EBGON,CY,P,C,E  F, ,010,TF, , , , , ,      ,    ,    ,1630,0050,+,02000,     ,     , ,   ,    ,   ,RW16,CY,P,G, ,B,U,C;
+APPCH:030,R,RNVA, ,RW16,CY,P,G,GY M, ,302,TF, , , , , ,      ,    ,    ,1630,0050, ,00375,     ,     , ,   ,-306,   , , , , , ,B,U,C;
+APPCH:040,R,RNVA, , , , , ,  M , ,010,CA, , , , , ,      ,    ,    ,1630,    ,+,01200,     ,     , ,   ,    ,   , , , , , ,B,U,C;
+APPCH:050,R,RNVA, ,AGBIL,CY,P,C,EY  ,L,010,DF, , , , , ,      ,    ,    ,    ,    , ,02300,     ,     , ,   ,    ,   , , , , , ,B,U,C;
+APPCH:060,R,RNVA, ,AGBIL,CY,P,C,EE H,L,010,HM, , , , , ,      ,    ,    ,2530,T010, ,     ,     ,     ,-,200,    ,   , , , , , ,B,U,C;
+RWY:RW16 ,+1030,      ,00325, ,    , ,   ;N45152477,W074483674,0000;
+RWY:RW34 ,     ,      ,00359, ,    , ,   ;N45145680,W074481288,0000;

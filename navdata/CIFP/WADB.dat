@@ -1,0 +1,16 @@
+STAR:010,2,MUBO1A,ALL,MUBOT,WA,E,A,E C , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,13000, ,   ,    ,   ,NMA,WA,D, , , , , ;
+STAR:020,2,MUBO1A,ALL,NMA,WA,D, ,V   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,2,MUBO1A,ALL,SARIR,WA,P,C,EECH,L,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:010,2,RUTE1A,ALL,RUTEN,WA,E,A,E C , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,13000, ,   ,    ,   ,NMA,WA,D, , , , , ;
+STAR:020,2,RUTE1A,ALL,NMA,WA,D, ,V   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,2,RUTE1A,ALL,SARIR,WA,P,C,EECH, ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:010,2,UNSE1A,ALL,UNSEP,WA,E,A,E C , ,   ,IF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,13000, ,   ,    ,   ,NMA,WA,D, , , , , ;
+STAR:020,2,UNSE1A,ALL,NMA,WA,D, ,V   , ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+STAR:030,2,UNSE1A,ALL,SARIR,WA,P,C,EECH, ,   ,TF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , , , , ;
+APPCH:010,A,CVOR,SARIR,SARIR,WA,P,C,EECC,R,   ,HF, , , , , ,      ,    ,    ,1770,T010,+,07000,     ,13000, ,   ,    ,   , , , , , ,0, ,C;
+APPCH:020,V,CVOR, ,SARIR,WA,P,C,E CF, ,   ,IF, ,NMA,WA,D, ,      ,3568,0200,    ,    ,+,07000,     ,13000, ,   ,    ,   ,NMA,WA,D, , ,0, ,C;
+APPCH:030,V,CVOR, ,NMA,WA,D, ,V  M, ,   ,CF, ,NMA,WA,D, ,      ,0000,0000,1770,0200, ,01950,     ,     , ,   , 000,   , , , , , ,0, ,C;
+APPCH:040,V,CVOR, , , , , ,  M ,R,   ,VI,Y, , , , ,      ,    ,    ,0270,    , ,     ,     ,     , ,   ,    ,   , , , , , ,0, ,C;
+APPCH:050,V,CVOR, ,SARIR,WA,P,C,EE H, ,   ,CF, ,NMA,WA,D, ,      ,3568,0200,3570,0140,+,07000,     ,     , ,   ,    ,   , , , , , ,0, ,C;
+RWY:RW14 ,     ,      ,00007, ,    , ,   ;S08314910,E118404408,0000;
+RWY:RW32 ,     ,      ,00004, ,    , ,   ;S08324245,E118413214,0000;

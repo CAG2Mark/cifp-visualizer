@@ -1,0 +1,14 @@
+APPCH:010,A,R15,TBZNA,TBZNA,YM,P,C,E  A, ,010,IF, , , , , ,      ,    ,    ,    ,    , ,02600,     ,11000, ,   ,    ,   , , , , , ,B,J,S;
+APPCH:020,A,R15,TBZNA,TBZNI,YM,P,C,EE B, ,010,TF, , , , , ,      ,    ,    ,    ,    ,-,02600,     ,     , ,   ,    ,   , , , , , ,B,J,S;
+APPCH:010,A,R15,TBZNC,TBZNC,YM,P,C,E  A, ,010,IF, , , , , ,      ,    ,    ,    ,    , ,02600,     ,11000, ,   ,    ,   , , , , , ,B,J,S;
+APPCH:020,A,R15,TBZNC,TBZNI,YM,P,C,EE B, ,010,TF, , , , , ,      ,    ,    ,    ,    ,-,02600,     ,     , ,   ,    ,   , , , , , ,B,J,S;
+APPCH:010,A,R15,TBZND,TBZND,YM,P,C,E  C, ,010,IF, , , , , ,      ,    ,    ,    ,    , ,02600,     ,11000, ,   ,    ,   , , , , , ,B,J,S;
+APPCH:020,A,R15,TBZND,TBZNI,YM,P,C,EE B, ,010,TF, , , , , ,      ,    ,    ,    ,    ,-,02600,     ,     , ,   ,    ,   , , , , , ,B,J,S;
+APPCH:010,R,R15, ,TBZNI,YM,P,C,E  I, ,010,IF, , , , , ,      ,    ,    ,    ,    ,-,02600,     ,11000, ,   ,    ,   , , , , , ,B,J,S;
+APPCH:020,R,R15, ,TBZNF,YM,P,C,E  F, ,010,TF, , , , , ,      ,    ,    ,1540,0050,+,01870,     ,     , ,   ,    ,   ,YTBB,YM,P,A, ,B,J,S;
+PRDAT: ,          , ,          ,A,      LNAV, ,   , ,   , ,   , ,   ,J,S;
+APPCH:030,R,R15, ,TBZNM,YM,P,C,EY M, ,302,TF, , , , , ,      ,    ,    ,1540,0050, ,00174,     ,     , ,   ,-320,   , , , , , ,B,J,S;
+APPCH:040,R,R15, ,TBZNH,YM,P,C,E M ,L,010,DF, , , , , ,      ,    ,    ,    ,    , ,     ,     ,     , ,   ,    ,   , , , , , ,B,J,S;
+APPCH:050,R,R15, ,TBZNH,YM,P,C,EE  , ,010,FM, ,PLC,YM,D,B,      ,0311,0225,3560,    ,+,02600,     ,     , ,   ,    ,   , , , , , ,B,J,S;
+RWY:RW15 ,-0600,      ,00032, ,    , ,   ;S34212485,E136053742,0000;
+RWY:RW33 ,     ,      ,00011, ,    , ,   ;S34215840,E136055177,0000;
