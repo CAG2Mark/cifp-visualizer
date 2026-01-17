@@ -9,6 +9,8 @@ The code is quite messy because I made this for a 2.5 month long course project.
 - 3D visualization of flight procedures
 - Respects altitude constraints
 - Takes into account turn radii, climb rate, and descent rate
+- Easy-to-use web UI
+- Not vibe coded!
 
 # Using
 On Linux x86, simply run ./start.sh. You will need Python 3.10 or later.
