@@ -189,7 +189,10 @@ class NavDatabase:
       if desc[0] == "G":
         return self.get_runway_waypoint(airport, fix)
       if desc[0] == "N" or desc[0] == "V":
-        self.get_waypoint(fix, icao, "ENRT")
+        try:
+          return self.get_waypoint(fix, icao, "ENRT")
+        except:
+          self.get_waypoint(fix, icao, airport)
     return self.get_waypoint(fix, icao, airport)
   
   def process_course(self, data: list[str]) -> Course:

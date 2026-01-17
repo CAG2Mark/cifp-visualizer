@@ -58,5 +58,4 @@ DEBUG = False
 if not DEBUG:
   start_server()
 else:
-  # Code for debugging
   pass
